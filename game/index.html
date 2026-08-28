@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fence the Farm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- Designed at 1280 x 720 and scaled from there (§responsive design). -->
+<div id="ftf-root">
+  <div id="ftf-stage">
+
+    <img id="ftf-grass" src="assets/art/grass-bg.png" alt="">
+    <!-- Level lighting: the only thing that changes between farms (§level variation). -->
+    <div id="ftf-light"></div>
+    <div id="ftf-vig"></div>
+
+    <!-- ================= PLAYFIELD =================
+         Everything here is positioned from the one shape state, so the picture
+         can never disagree with the number. -->
+    <div id="ftf-field">
+      <div id="ftf-ghost"></div>
+      <div id="ftf-fill"></div>
+      <div id="ftf-grid"></div>
+      <div id="ftf-guide"></div>
+      <div id="ftf-modules"></div>
+
+      <!-- Gold measuring tracer, used by the finale to walk both perimeters. -->
+      <svg id="ftf-trace" viewBox="0 0 1280 720" aria-hidden="true">
+        <rect id="ftf-trace-a" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+        <rect id="ftf-trace-b" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+      </svg>
+
+      <img id="ftf-goat" src="assets/art/idle-0.png" alt="">
+
+      <div id="ftf-dim-w" class="ftf-dim">5 m</div>
+      <div id="ftf-dim-h" class="ftf-dim">5 m</div>
+
+      <!-- Shown once, before the first touch, then removed permanently. -->
+      <div id="ftf-hand"></div>
+
+      <button id="ftf-handle" type="button" class="ftf-focus" aria-label="Fence shape control">
+        <span id="ftf-glow"></span>
+        <span id="ftf-ring"></span>
+      </button>
+    </div>
+
+    <!-- ================= HUD ================= -->
+
+    <!-- The hanging sign. Instruction, challenge and consequence all speak
+         here, so two messages can never stack up on screen. It is the supplied
+         panel art used whole; fitSign scales the line to fill its board. -->
+    <div id="ftf-plank" class="ftf-sign">
+      <span class="ftf-sign-m">
+        <span id="ftf-plank-1" data-i18n="instruction.drag">Drag this corner</span>
+      </span>
+    </div>
+
+    <!-- Returning players can step straight into the interactive part. -->
+    <button id="ftf-skip" type="button" class="ftf-focus" data-i18n="action.skip">Skip tutorial</button>
+
+    <!-- Level 4 furniture: the optional exact-area build. -->
+    <div id="ftf-bonus">
+      <span class="ftf-bonus-cap" data-i18n="bonus.cap">Bonus</span>
+      <span id="ftf-bonus-txt">Make exactly 48 m²</span>
+    </div>
+
+    <!-- Constant. Small, quiet, never animated (§UI hierarchy). -->
+    <div id="ftf-fence-badge">
+      <div class="ftf-card-in">
+        <div class="ftf-badge-cap" data-i18n="hud.fence">Fence</div>
+        <div id="ftf-fence-val">20 m</div>
+      </div>
+    </div>
+
+    <!-- Changing. The hero number, on the supplied score board. -->
+    <div id="ftf-area-card">
+      <div id="ftf-burst"></div>
+      <div class="ftf-area-in">
+        <div class="ftf-area-row">
+          <span id="ftf-area-val">16</span><span class="ftf-area-unit">m²</span>
+        </div>
+        <div class="ftf-area-cap" data-i18n="hud.grassArea">Grass area</div>
+      </div>
+    </div>
+
+    <!-- The performance meter. It becomes a real graph in the advanced reveal. -->
+    <div id="ftf-curve">
+      <svg viewBox="0 0 240 130" preserveAspectRatio="none" aria-hidden="true">
+        <g id="ftf-curve-axes">
+          <line class="ftf-ax" x1="30" y1="8" x2="30" y2="112"></line>
+          <line class="ftf-ax" x1="30" y1="112" x2="232" y2="112"></line>
+        </g>
+        <path id="ftf-curve-path" d=""></path>
+        <line id="ftf-curve-drop" x1="0" y1="0" x2="0" y2="0"></line>
+        <circle id="ftf-curve-tok" cx="0" cy="0" r="7"></circle>
+      </svg>
+      <div id="ftf-curve-lbl-x" class="ftf-curve-lbl" data-i18n="graph.length">Length</div>
+      <div id="ftf-curve-lbl-y" class="ftf-curve-lbl" data-i18n="graph.area">Area</div>
+      <div id="ftf-curve-peak" data-i18n="graph.peak">L = 8 · W = 8 · A = 64</div>
+    </div>
+
+    <button id="ftf-next" type="button" class="ftf-btn ftf-focus">
+      <span data-i18n="action.next">Next farm</span>
+    </button>
+
+    <!-- ================= SCREEN 1 · TITLE ================= -->
+    <div id="ftf-title" data-screen-label="Title">
+      <div class="ftf-title-top">
+        <!-- The title is artwork; the h1 stays for screen readers and i18n. -->
+        <img id="ftf-logo" src="assets/art/title-logo.png" alt="">
+        <h1 class="ftf-sr" data-i18n="title.name">Fence the Farm</h1>
+      </div>
+      <div class="ftf-title-bottom">
+        <button id="ftf-play" type="button" class="ftf-btn ftf-btn-xl ftf-focus" data-i18n="action.play">Play</button>
+      </div>
+    </div>
+
+    <!-- ================= FINALE =================
+         Five phases, all on the same grass. No overlay, no blank page. -->
+    <div id="ftf-fin" data-screen-label="Finale">
+      <div id="ftf-fin-a-lbl" class="ftf-cmp-lbl"><div class="ftf-cmp-in">
+        <div class="ftf-cmp-tag" data-i18n="final.startBuild">Start build</div>
+        <div class="ftf-cmp-fence"><i id="ftf-fa-dims">13 × 3 m</i></div>
+        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Fence</span> <b id="ftf-fa-per">32 m</b></div>
+        <div class="ftf-cmp-area"><span id="ftf-fa-area">0</span><i>m²</i></div>
+      </div></div>
+      <div id="ftf-fin-b-lbl" class="ftf-cmp-lbl"><div class="ftf-cmp-in">
+        <div class="ftf-cmp-tag" data-i18n="final.bestBuild">Best build</div>
+        <div class="ftf-cmp-fence"><i id="ftf-fb-dims">8 × 8 m</i></div>
+        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Fence</span> <b id="ftf-fb-per">32 m</b></div>
+        <div class="ftf-cmp-area"><span id="ftf-fb-area">0</span><i>m²</i></div>
+      </div></div>
+    </div>
+
+    <!-- The emblem that assembles when the peak is found. -->
+    <div id="ftf-emblem">
+      <div class="ftf-hay">
+        <div class="ftf-hay-in">
+          <div class="ftf-emb-1" data-i18n="final.strategy">Strategy discovered</div>
+          <div class="ftf-emb-2" data-i18n="final.balanced">Balanced sides → most area</div>
+          <div class="ftf-emb-3" data-i18n="final.qualifier">with the same rectangular perimeter</div>
+        </div>
+      </div>
+      <button id="ftf-to-formula" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+    </div>
+
+    <!-- ================= FORMULA, IN THE FIELD ================= -->
+    <div id="ftf-fm" data-screen-label="Formula">
+      <div id="ftf-fm-per" class="ftf-fm-block">
+        <div class="ftf-fm-cap" data-i18n="formula.outside">Fence around the outside</div>
+        <div class="ftf-fm-eq ftf-fm-eq-p">P = 2 (L + W)</div>
+        <div id="ftf-fm-per-sub" class="ftf-fm-sub">P = 2 (8 + 8)</div>
+        <div id="ftf-fm-per-res" class="ftf-fm-res ftf-fm-res-p">P = 32 m</div>
+      </div>
+      <div id="ftf-fm-area" class="ftf-fm-block">
+        <div class="ftf-fm-cap" data-i18n="formula.inside">Grass inside</div>
+        <div class="ftf-fm-eq ftf-fm-eq-a">A = L × W</div>
+        <div id="ftf-fm-area-sub" class="ftf-fm-sub">A = 8 × 8</div>
+        <div id="ftf-fm-area-res" class="ftf-fm-res ftf-fm-res-a">A = 64 m²</div>
+      </div>
+      <div id="ftf-fm-core">
+        <span class="ftf-core-1" data-i18n="formula.fixedP">Fixed perimeter</span>
+        <span class="ftf-core-2" data-i18n="formula.doesNot">does not mean</span>
+        <span class="ftf-core-3" data-i18n="formula.fixedA">Fixed area</span>
+      </div>
+      <div id="ftf-fm-act">
+        <button id="ftf-see-why" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.seeWhy">See why</button>
+        <button id="ftf-to-complete" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+      </div>
+    </div>
+
+    <!-- ================= ADVANCED ALGEBRA ================= -->
+    <div id="ftf-adv" data-screen-label="Advanced">
+      <div class="ftf-hay ftf-adv-card">
+        <div class="ftf-hay-in ftf-adv-in">
+          <div id="ftf-adv-1" class="ftf-adv-row">
+            <span class="ftf-adv-eq">L + W = 16</span>
+            <span class="ftf-adv-note" data-i18n="adv.half">half of the 32 m fence</span>
+          </div>
+          <div id="ftf-adv-2" class="ftf-adv-row">
+            <span class="ftf-adv-eq">W = 16 − L</span>
+            <span id="ftf-adv-sub" class="ftf-adv-note">L = 8 → W = 8</span>
+          </div>
+          <div id="ftf-adv-3" class="ftf-adv-row">
+            <span class="ftf-adv-eq ftf-adv-eq-a">A = L (16 − L)</span>
+          </div>
+          <div id="ftf-adv-4" class="ftf-adv-row ftf-adv-last">
+            <div data-i18n="adv.reveal">The path you dragged was this curve.</div>
+            <button id="ftf-adv-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= COMPLETION ================= -->
+    <div id="ftf-complete" data-screen-label="Complete">
+      <div id="ftf-badge" class="ftf-sign">
+          <span class="ftf-sign-m">
+          <span class="ftf-done-title" data-i18n="complete.title">Master builder</span>
+          <span class="ftf-done-sub" data-i18n="complete.sub">Same fence. Smarter shape.</span>
+        </span>
+        </div>
+      <div id="ftf-complete-foot">
+        <div class="ftf-done-count" data-i18n="complete.count">4 farms completed</div>
+        <div class="ftf-done-btns">
+          <button id="ftf-replay" type="button" class="ftf-btn ftf-btn-lg ftf-focus" data-i18n="action.playAgain">Play again</button>
+          <button id="ftf-explore-btn" type="button" class="ftf-btn ftf-btn-wood ftf-btn-lg ftf-focus" data-i18n="action.explore">Explore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= EXPLORE (sandbox) ================= -->
+    <div id="ftf-explore" data-screen-label="Explore">
+      <div id="ftf-explore-bar">
+        <span class="ftf-explore-cap" data-i18n="explore.pick">Pick a fence</span>
+        <div id="ftf-explore-chips"></div>
+      </div>
+      <button id="ftf-explore-exit" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.done">Done</button>
+    </div>
+
+    <div id="ftf-loader">Loading</div>
+
+    <!-- ================= DEBUG · never built in production ================= -->
+    <div id="ftf-debug">
+      <div class="ftf-dbg-head"><span>Debug navigator</span><span class="ftf-dbg-key">press D</span></div>
+      <pre id="ftf-debug-stats">-</pre>
+      <div class="ftf-dbg-cap">States</div>
+      <div id="ftf-debug-screens" class="ftf-dbg-row"></div>
+      <div class="ftf-dbg-cap">Toggles</div>
+      <div id="ftf-debug-toggles" class="ftf-dbg-row"></div>
+    </div>
+    <div id="ftf-dimdebug">-</div>
+
+    <!-- String source for keys with no permanent home in the markup. -->
+    <div id="ftf-strings">
+      <span data-i18n="tut.reason">Give her more grass</span>
+      <span data-i18n="tut.touch">Drag this corner</span>
+      <span data-i18n="tut.noticed">More grass — still 20 m</span>
+      <span data-i18n="tut.more">Can you give her even more?</span>
+      <span data-i18n="tut.challenge">Find the biggest area</span>
+      <span data-i18n="tut.success">Biggest grass area!</span>
+      <span data-i18n="tut.gotIt">You&#39;ve got it!</span>
+      <span data-i18n="instruction.record">Beat the record — 32 m²</span>
+      <span data-i18n="instruction.push">Push it further.</span>
+      <span data-i18n="instruction.stretch">Stretch it longer</span>
+      <span data-i18n="instruction.mostGrass">Now find the most grass</span>
+      <span data-i18n="feedback.longerLess">Longer field. Less grass.</span>
+      <span data-i18n="feedback.tryMore">Better. Can you do more?</span>
+      <span data-i18n="record.new">New record — 33 m²</span>
+      <span data-i18n="success.r2">Record smashed!</span>
+      <span data-i18n="success.r3">Longer wasn't more grass.</span>
+      <span data-i18n="success.r4">Master build.</span>
+      <span data-i18n="bonus.make">Make exactly 48 m²</span>
+      <span data-i18n="bonus.done">Exactly 48 m². Same fence.</span>
+      <span data-i18n="action.reveal">See the proof</span>
+      <span data-i18n="final.longest">Your longest</span>
+      <span data-i18n="a11y.area">Grass area</span>
+      <span data-i18n="a11y.sqm">square metres</span>
+    </div>
+
+    <div id="ftf-a11y" aria-live="polite"></div>
+  </div>
+</div>
+
+  <script src="js/game.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/goat.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/finale.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/debug.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

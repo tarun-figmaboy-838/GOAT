@@ -1,0 +1,32 @@
+# Source art the game never loads at runtime: the originals the derived assets
+# were cut from, and the PLAY sprite the CSS buttons replaced. They stay in the
+# repo so assets can be recut, but there is no reason to ship ~7 MB of them.
+#
+# NOTE: the goat frames and the audio ARE shipped. They are referenced by name
+# at runtime ('assets/art/' + name), so a text search of the source wrongly
+# reports them as unused. Do not add them here.
+*/assets/art/banner.png
+*/assets/art/pannel.png
+*/assets/art/counter.png
+*/assets/art/score.png
+*/assets/art/hand.png
+*/assets/art/touch.svg
+*/assets/art/play button sprite.png
+*/assets/art/verticalfence*
+*/assets/art/btn-play-*.png
+# The supplied goat and fence sheets, before the keyed matte was cleaned off
+# them. Kept so the sprites can be recut; the cleaned sheets are what ships.
+*/assets/art/goat-sprite*
+*/assets/art/fence-ui*
+*/assets/goat/*.raw.png
+
+# Loose source art at the repo root.
+assets/
+
+# Test harnesses, never deployed.
+**/__shot.js
+**/__shot.html
+**/__p.js
+**/__p.html
+
+.git/

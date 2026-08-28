@@ -1,0 +1,1147 @@
+/* ============================================================================
+   FENCE THE FARM
+   Authored at 1280 x 720; #ftf-stage is scaled from JS to fill any 16:9 window.
+   Every position below is stage pixels, so what is designed is what ships.
+   ========================================================================== */
+
+@font-face { font-family: 'Osmose'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../assets/fonts/Osmose-Regular.otf') format('opentype'); }
+@font-face { font-family: 'Osmose'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('../assets/fonts/Osmose-Bold.otf') format('opentype'); }
+
+html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
+
+:root {
+  --wood-lo: #7C4F26;  --wood-hi: #A0703C;  --wood-edge: #543518;  --wood-deep: #452A12;
+  --hay-a: #E6C377;    --hay-b: #D4AC58;    --hay-c: #C69C48;
+  --paper: #FFFBEE;    --paper-2: #F6E7C6;  --paper-edge: #E8D5A8;
+  --ink: #4A2E12;      --ink-soft: #6B5023;  --cap: #8A6A34;
+  --grass-ink: #3D6B2A; --area-ink: #2F6B27; --area-unit: #5E8A3F;
+  --green-hi: #7CBB3C; --green-lo: #55912A;  --green-edge: #2C5417;
+  --cream: #FFF6E0;    --focus: rgba(91, 196, 196, .9);
+  --gold: #FFC24A;     --gold-deep: #C8871B;
+  /* Level lighting drives the shadow length and direction on every module. */
+  --sh-x: 0px; --sh-y: 3px; --sh-blur: 3px; --sh-ink: rgba(24, 52, 12, .3);
+}
+
+/* ---------------------------------------------------------------- shell --- */
+#ftf-root {
+  position: fixed; inset: 0; overflow: hidden;
+  background: #7AB92C; display: flex; align-items: center; justify-content: center;
+  font-family: 'Nunito Sans', 'Segoe UI', sans-serif;
+}
+#ftf-stage {
+  position: relative; width: 1280px; height: 720px; flex: none;
+  transform-origin: center center; overflow: hidden;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  box-shadow: 0 0 90px 60px rgba(38, 66, 16, .5);
+}
+/* Large clean cartoon grass. Nothing else in the world (§background rule). */
+#ftf-grass { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+/* Time of day. Levels differ by light, never by clutter (§level variation).
+   The grass itself is graded, and a directional wash sits over it, so the
+   change reads at a glance without touching the playable geometry. */
+#ftf-grass { transition: filter 900ms ease; }
+#ftf-light {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  transition: opacity 900ms ease;
+  mix-blend-mode: multiply;
+}
+#ftf-vig {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(128% 100% at 50% 40%, rgba(0, 0, 0, 0) 55%, rgba(24, 52, 12, .22) 100%);
+}
+#ftf-stage[data-light="morning"] #ftf-grass { filter: saturate(.95) brightness(1.05) hue-rotate(-4deg); }
+#ftf-stage[data-light="midday"]  #ftf-grass { filter: saturate(1.02) brightness(1.02); }
+#ftf-stage[data-light="evening"] #ftf-grass { filter: saturate(1.06) brightness(.97) sepia(.07) hue-rotate(-5deg); }
+#ftf-stage[data-light="golden"]  #ftf-grass { filter: saturate(1.1) brightness(.96) sepia(.12) hue-rotate(-8deg); }
+#ftf-stage[data-light="morning"] #ftf-light { opacity: .26; background: linear-gradient(165deg, rgba(206, 232, 255, 1) 0%, rgba(250, 252, 240, 1) 70%); }
+#ftf-stage[data-light="midday"]  #ftf-light { opacity: .12; background: linear-gradient(180deg, rgba(255, 255, 250, 1) 0%, rgba(244, 250, 235, 1) 100%); }
+#ftf-stage[data-light="evening"] #ftf-light { opacity: .24; background: linear-gradient(205deg, rgba(255, 226, 178, 1) 0%, rgba(232, 174, 122, 1) 100%); }
+#ftf-stage[data-light="golden"]  #ftf-light { opacity: .3; background: linear-gradient(215deg, rgba(255, 218, 150, 1) 0%, rgba(222, 152, 92, 1) 100%); }
+/* Later in the day the shadows lengthen and lean. */
+#ftf-stage[data-light="morning"] { --sh-x: -3px; --sh-y: 3px; --sh-blur: 3px; --sh-ink: rgba(24, 52, 12, .26); }
+#ftf-stage[data-light="midday"]  { --sh-x: 0px;  --sh-y: 3px; --sh-blur: 3px; --sh-ink: rgba(24, 52, 12, .3); }
+#ftf-stage[data-light="evening"] { --sh-x: 7px;  --sh-y: 5px; --sh-blur: 5px; --sh-ink: rgba(52, 38, 12, .36); }
+#ftf-stage[data-light="golden"]  { --sh-x: 11px; --sh-y: 6px; --sh-blur: 7px; --sh-ink: rgba(58, 34, 8, .4); }
+
+/* ------------------------------------------------------------ playfield --- */
+#ftf-field { position: absolute; inset: 0; pointer-events: none; }
+
+#ftf-fill {
+  position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 100;
+  border-radius: 4px; background: rgba(126, 196, 44, .22);
+  box-shadow: inset 0 0 40px rgba(46, 92, 16, .28);
+  transition: background 220ms ease;
+}
+/* The shape the player stretched to, held up against the shape they found. */
+#ftf-ghost {
+  position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 96;
+  opacity: 0; transition: opacity 420ms ease;
+  border: 3px dashed rgba(255, 246, 224, .8); border-radius: 4px;
+  background: rgba(60, 42, 16, .16);
+}
+#ftf-grid {
+  position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 110;
+  opacity: 0; transition: opacity 200ms ease;
+}
+/* Very faint legal guide; only while the handle is held. */
+#ftf-guide {
+  position: absolute; left: 0; top: 0; width: 0; height: 3px; z-index: 115;
+  opacity: 0; transform-origin: 50% 50%;
+  background: repeating-linear-gradient(90deg, rgba(255, 246, 224, .95) 0 12px, rgba(255, 246, 224, 0) 12px 24px);
+  animation: ftf-dash 700ms linear infinite;
+  transition: opacity 260ms ease;
+}
+#ftf-modules { position: absolute; inset: 0; }
+#ftf-trace {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 870;
+  pointer-events: none; opacity: 0; transition: opacity 240ms ease;
+}
+/* The tracer has to read against BOTH the brown rails it lies on and the green
+   grass around them, so a single warm stroke with a same-hue glow disappears.
+   Instead: a dark casing underneath for a crisp edge, a near-white core on top
+   for brightness, and a warm glow outside that to keep it in the palette. */
+#ftf-trace rect { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+/* The bloom is a genuinely wide, blurred stroke rather than a drop-shadow, so
+   the light spills onto the grass either side of the rail and the sweep is
+   impossible to miss. */
+.ftf-trace-glow {
+  stroke: #FFB01A; stroke-width: 36; opacity: .8;
+  filter: blur(10px);
+}
+.ftf-trace-bg {
+  stroke: #2E1B06; stroke-width: 14; opacity: .5;
+}
+.ftf-trace-hi {
+  stroke: #FFFDF4; stroke-width: 7;
+  filter: drop-shadow(0 0 4px #FFD463) drop-shadow(0 0 10px #FFA81A) drop-shadow(0 0 20px rgba(255, 150, 20, .9));
+}
+/* The goat is two nested boxes on purpose. The outer one is the character: its
+   transform is her place in the field, her heading and her scale. The inner one
+   is only ever a window onto one frame of one sheet. Keeping them apart is what
+   stops an animation frame from fighting the movement transform.
+
+   She is anchored on her own centre because she turns to face where she is
+   walking, and a centre pivot is the only one that does not make her swing.
+
+   The shadow is a small contact shadow and nothing more: a long or directional
+   shadow would imply a camera that is not directly overhead, and the whole
+   scene - grass, fence, goat, handle - is drawn from straight above. */
+#ftf-goat {
+  position: absolute; left: 0; top: 0; width: 60px; height: 120px; z-index: 300;
+  opacity: 0; transform-origin: 50% 50%; pointer-events: none;
+  filter: drop-shadow(0 5px 4px rgba(40, 60, 20, .28));
+}
+#ftf-goat-sprite {
+  width: 100%; height: 100%; overflow: hidden;
+  background-repeat: no-repeat;
+  background-size: 400% 200%;            /* the sheets are 4 columns x 2 rows */
+  transform-origin: 50% 50%;
+}
+/* Her title-screen self. Seen from the side, standing on the grass, so she is
+   anchored on her hooves rather than her middle. She is only ever visible on
+   the title and during the tilt into the farm. */
+#ftf-goat-side {
+  position: absolute; left: 0; top: 0; width: auto; height: 190px; z-index: 300;
+  opacity: 0; transform-origin: 50% 100%; pointer-events: none;
+  filter: drop-shadow(0 6px 6px rgba(24, 52, 12, .35));
+}
+
+/* Side lengths. These are a measurement the player is meant to read, so they
+   sit on their own board rather than floating as text on grass. */
+.ftf-dim {
+  position: absolute; left: 0; top: 0; z-index: 880; opacity: 0;
+  transition: opacity 300ms ease; white-space: nowrap;
+  min-width: 84px; box-sizing: border-box;
+  padding: 7px 16px 9px; border-radius: 14px;
+  font: 900 32px 'Nunito', sans-serif; color: #3E2409;
+  text-align: center; letter-spacing: .5px;
+  background: linear-gradient(180deg, #FFF6DA 0%, #F0D79E 100%);
+  border: 3px solid #A87C3C;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7), 0 4px 0 #99702F, 0 8px 16px rgba(24, 52, 12, .4);
+}
+#ftf-dim-w { transform: translate(-50%, 0); }
+#ftf-dim-h { transform: translate(0, -50%); }
+
+/* --------------------------------------------------------- drag handle ---
+   One corner, one input. The hit region is far larger than the art (§touch). */
+#ftf-handle {
+  position: absolute; left: 0; top: 0; width: 104px; height: 124px;
+  margin: -62px 0 0 -52px; padding: 0; border: 0; border-radius: 24px;
+  background: transparent; cursor: grab; pointer-events: auto;
+  touch-action: none; z-index: 900; outline: none;
+}
+#ftf-glow, #ftf-ring {
+  position: absolute; left: 50%; top: 50%; width: 74px; height: 74px;
+  margin: -37px 0 0 -37px; border-radius: 50%; pointer-events: none;
+}
+#ftf-glow {
+  background: radial-gradient(circle, rgba(255, 214, 120, .62) 0%, rgba(255, 190, 70, .28) 45%, rgba(255, 190, 70, 0) 72%);
+  animation: ftf-breathe 2100ms ease-in-out infinite;
+}
+#ftf-ring { border: 3px solid rgba(255, 246, 224, .85); opacity: 0; }
+
+/* Shown once before the first touch, then removed for good. */
+/* The supplied touch hand, rasterised from touch.svg (which carries three
+   3000px PNGs and weighs 13.6 MB) down to a 29 KB asset at the size it is
+   actually drawn. Mirrored so the finger points back at the handle while the
+   arm falls away to the lower right, clear of the pasture. Its fingertip sits
+   at 0.35%, 16.11% of the mirrored art - which is the point JS anchors. */
+#ftf-hand {
+  position: absolute; left: 0; top: 0; width: 96px; height: 115px; z-index: 910;
+  opacity: 0; pointer-events: none; transition: opacity 300ms ease;
+  background: url('../assets/art/touch.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(-3px 6px 8px rgba(24, 52, 12, .5));
+}
+
+/* ------------------------------------------ the live explanation --------
+   One screen the student operates. The pasture keeps the left, the curve keeps
+   the right, and the only text is one line of instruction and one line of live
+   arithmetic. Everything else that used to be on these screens is gone: the
+   point is what happens when they move it, not what is written about it. */
+#ftf-live { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+#ftf-live.ftf-on { display: block; }
+#ftf-live > * { pointer-events: auto; }
+
+#ftf-live-hint {
+  position: absolute; left: 0; right: 0; top: 26px; text-align: center;
+  font: 700 21px 'Nunito', sans-serif; color: var(--cream);
+  text-shadow: 0 2px 0 var(--ink), 0 3px 12px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+/* The live arithmetic. Sits under the curve, changes on every drag, and is the
+   only number-work on the screen. */
+#ftf-live-eq {
+  position: absolute; right: 40px; top: 486px; width: 560px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  pointer-events: none;
+}
+#ftf-live-lw {
+  font: 800 24px 'Nunito', sans-serif; color: #2E4A86;
+  background: rgba(255, 252, 240, .93); padding: 5px 18px 6px; border-radius: 999px;
+  border: 3px solid var(--wood-edge); box-shadow: 0 4px 0 var(--wood-deep);
+}
+#ftf-live-a {
+  font: 800 34px 'Nunito', sans-serif; color: #1D6B33;
+  background: rgba(255, 252, 240, .96); padding: 6px 22px 8px; border-radius: 999px;
+  border: 3px solid var(--wood-edge); box-shadow: 0 5px 0 var(--wood-deep);
+}
+/* The derivation is opt-in and appears in place, not on another screen. */
+#ftf-live-why {
+  position: absolute; right: 40px; top: 596px; width: 560px;
+  display: flex; justify-content: center; gap: 10px; opacity: 0;
+  transition: opacity 380ms ease; pointer-events: none;
+}
+.ftf-why-eq {
+  font: 700 17px 'Nunito Sans', sans-serif; color: var(--ink);
+  background: rgba(255, 252, 240, .82); padding: 4px 12px 5px; border-radius: 8px;
+}
+#ftf-live-why.ftf-in { opacity: 1; }
+
+/* Held back until they find the balanced shape themselves. */
+#ftf-live-strategy {
+  position: absolute; left: 40px; bottom: 116px; width: 540px; text-align: center;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 420ms ease, transform 420ms cubic-bezier(.34,1.4,.64,1);
+  font: 700 25px 'Nunito', sans-serif; color: var(--cream);
+  text-shadow: 0 2px 0 var(--ink), 0 4px 14px rgba(0, 0, 0, .5);
+  pointer-events: none;
+}
+#ftf-live-strategy b { color: #FFD65C; }
+#ftf-live-strategy i {
+  display: block; margin-top: 2px; font: 600 15px 'Nunito Sans', sans-serif;
+  font-style: normal; color: #E4EFD0;
+}
+#ftf-live-strategy.ftf-in { opacity: 1; transform: translateY(0); }
+
+#ftf-live-act {
+  position: absolute; right: 40px; bottom: 26px; display: flex; gap: 14px; align-items: center;
+}
+#ftf-live-act .ftf-btn { position: relative; opacity: 1; }
+
+/* The curve moves to the right half on this screen and grows. */
+#ftf-live.ftf-on ~ #ftf-curve, #ftf-curve.ftf-live-pos {
+  left: auto; right: 40px; top: 150px; width: 560px; height: 330px; opacity: 1;
+}
+
+/* ---------------------------------------------- ambient farm life -------
+   The lowest thing in the visual hierarchy, and it has to stay there: the
+   lesson is the geometry, and grass that competes with it would be a bug, not
+   a feature. So everything here is slow (16-90 second cycles), faint, and
+   drawn UNDER the fence. Nothing is ever created at runtime.               */
+#ftf-amb  { position: absolute; inset: 0; z-index: 118; pointer-events: none; overflow: hidden; }
+#ftf-flit { position: absolute; inset: 0; z-index: 262; pointer-events: none; overflow: hidden; }
+
+/* Cloud shadows. Two enormous soft ellipses at very low opacity, crossing on
+   different periods so their overlap never repeats in a noticeable way. This
+   is what makes a flat green field read as being outdoors. */
+.ftf-cloud {
+  position: absolute; width: 780px; height: 460px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(24, 58, 14, .17) 0%, rgba(24, 58, 14, .07) 46%, rgba(24, 58, 14, 0) 72%);
+}
+.ftf-cloud-1 { top: -60px;  animation: ftf-cloud-a 74s linear infinite; }
+.ftf-cloud-2 { top: 300px;  animation: ftf-cloud-b 96s linear infinite; }
+@keyframes ftf-cloud-a {
+  0%   { transform: translateX(-700px) scale(1); }
+  100% { transform: translateX(1360px) scale(1.15); }
+}
+@keyframes ftf-cloud-b {
+  0%   { transform: translateX(1400px) scale(1.2); }
+  100% { transform: translateX(-720px) scale(1); }
+}
+
+/* Light tips over darker bases: the contrast is what makes a blade read as a
+   blade against grass of a similar green. */
+
+
+/* Butterflies. These fly ABOVE the fence, because from overhead that is where
+   a butterfly is - so they are the one ambient thing allowed over the pasture.
+   Kept small, pale and on long looping paths through the corners. */
+/* Drawn as cartoon game art, not as a minimal glyph: chunky wings with a dark
+   outline and a highlight spot, a proper body with a head, and a soft shadow -
+   so at 28px it still reads as a butterfly and belongs to the same illustrated
+   world as the fence and the goat. */
+.ftf-fly {
+  position: absolute; width: 28px; height: 22px;
+  will-change: transform;
+  filter: drop-shadow(0 3px 3px rgba(24, 52, 12, .34));
+}
+/* Body and head, sitting between the wings. */
+.ftf-fly::before {
+  content: ''; position: absolute; left: 12px; top: 4px; width: 4px; height: 15px;
+  border-radius: 2px; background: linear-gradient(180deg, #7A5322, #4E3312);
+  box-shadow: 0 0 0 1.5px rgba(48, 30, 10, .55);
+  z-index: 2;
+}
+.ftf-fly::after {
+  content: ''; position: absolute; left: 11.5px; top: 0; width: 5px; height: 5px;
+  border-radius: 50%; background: #4E3312;
+  box-shadow: 0 0 0 1.5px rgba(48, 30, 10, .5);
+  z-index: 2;
+}
+.ftf-fly b {
+  position: absolute; top: 1px; width: 13px; height: 20px;
+  border: 2px solid #B4741C;
+  background: radial-gradient(circle at 62% 32%, #FFFBE4 0%, #FFD65C 42%, #F79A2B 100%);
+  animation: ftf-wing .32s ease-in-out infinite;
+}
+/* A spot on each wing - the detail that makes it cartoon rather than abstract. */
+.ftf-fly b::after {
+  content: ''; position: absolute; top: 5px; width: 4px; height: 4px;
+  border-radius: 50%; background: rgba(150, 82, 12, .75);
+}
+.ftf-fly b:first-child {
+  left: 0; transform-origin: 100% 50%;
+  border-radius: 78% 30% 60% 26%;
+}
+.ftf-fly b:first-child::after { right: 4px; }
+.ftf-fly b:last-child {
+  right: 0; transform-origin: 0% 50%; animation-delay: -.16s;
+  border-radius: 30% 78% 26% 60%;
+}
+.ftf-fly b:last-child::after { left: 4px; }
+@keyframes ftf-wing {
+  0%, 100% { transform: scaleX(1)   skewY(0deg); }
+  50%      { transform: scaleX(.34) skewY(8deg); }
+}
+.ftf-fly-1 { animation: ftf-fly-a 38s linear infinite; }
+.ftf-fly-2 { animation: ftf-fly-b 46s linear infinite; animation-delay: -12s; }
+@keyframes ftf-fly-a {
+  0%   { transform: translate(-40px, 150px) rotate(8deg); }
+  25%  { transform: translate(300px, 76px)  rotate(-6deg); }
+  50%  { transform: translate(180px, 250px) rotate(10deg); }
+  75%  { transform: translate(420px, 130px) rotate(-4deg); }
+  100% { transform: translate(1330px, 200px) rotate(6deg); }
+}
+@keyframes ftf-fly-b {
+  0%   { transform: translate(1320px, 600px) rotate(-8deg); }
+  30%  { transform: translate(980px, 660px)  rotate(6deg); }
+  55%  { transform: translate(1120px, 520px) rotate(-10deg); }
+  80%  { transform: translate(760px, 640px)  rotate(4deg); }
+  100% { transform: translate(-50px, 580px)  rotate(-6deg); }
+}
+
+/* Reduced motion, and the game's own reduce switch, stop all of it. The farm
+   still looks like a farm - the tufts and pollen simply hold still. */
+@media (prefers-reduced-motion: reduce) {
+  #ftf-amb *, #ftf-flit *, #ftf-amb, #ftf-flit { animation: none !important; }
+  #ftf-flit { display: none; }
+}
+#ftf-stage.ftf-still #ftf-amb *,
+#ftf-stage.ftf-still #ftf-flit * { animation: none !important; }
+#ftf-stage.ftf-still #ftf-flit { display: none; }
+
+/* ------------------------------------------------- level celebration ----
+   Wordless. The farm is pushed out of focus and dimmed a little, she lands in
+   front of it, and the effects sit BEHIND her so nothing ever crosses her
+   face. The whole thing is under two seconds and leaves nothing in the DOM. */
+#ftf-cheer {
+  position: absolute; inset: 0; z-index: 1400; display: none; pointer-events: none;
+}
+#ftf-cheer.ftf-on { display: block; }
+
+/* The mascot wrapper carries the whole performance - jump, squash, rotation -
+   so the pose images inside it never have to move. The origin sits low in the
+   body, which is what makes a squash read as weight landing on the ground
+   rather than as a picture shrinking. */
+/* Hero size: the stage is otherwise empty for these eight seconds, so she can
+   afford to be big. 460px of a 720px stage reads as "this moment is about
+   her" without ever touching the edges. */
+#ftf-mascot {
+  position: absolute; left: 50%; top: 26%;
+  width: 460px; height: 460px;
+  transform: translate(-50%, 0);
+  transform-origin: 50% 85%;
+  will-change: transform;
+}
+/* Her shadow is one static ellipse on the ground, NOT a drop-shadow filter on
+   the images. A filter on a large image that is being transformed every frame
+   is the single most expensive thing here, and it was costing smoothness for
+   something a plain ellipse does better - it also stays on the ground when she
+   jumps, which is what a real shadow does. */
+#ftf-mascot::after {
+  content: ''; position: absolute; left: 50%; bottom: 6px;
+  width: 210px; height: 36px; margin-left: -105px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(28, 60, 16, .34) 0%, rgba(28, 60, 16, 0) 72%);
+  z-index: -1;
+}
+/* Two layers that swap; only their opacity is ever animated, so a dissolve can
+   never disturb the wrapper's motion. Every pose is a square image in a square
+   box, so plain 100% sizing is already exact - no object-fit needed, and one
+   less thing for a rasteriser to resolve differently. */
+.ftf-pose {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0;
+}
+/* Effects sit in two layers around her: rings and heavy confetti behind,
+   sparkles and light confetti in front. Everything in front would flatten her.
+   Both are anchored near her chest, which is where a burst should come from. */
+#ftf-mascot-back, #ftf-mascot-front {
+  position: absolute; left: 50%; top: 26%; width: 0; height: 0;
+  transform: translate(0, 215px); pointer-events: none;
+}
+#ftf-mascot-back { z-index: -1; }
+.ftf-part { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+.ftf-p-rect  { border-radius: 2px; transform: translate(-50%, -50%); }
+.ftf-p-dot   { border-radius: 50%; transform: translate(-50%, -50%); }
+.ftf-p-dia   { border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg); }
+.ftf-p-spark {
+  border-radius: 50%; background: #FFF6C9; transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px 4px rgba(255, 203, 74, .8);
+}
+.ftf-p-ring {
+  width: 240px; height: 240px; border-radius: 50%;
+  border: 3px solid rgba(255, 246, 201, .9);
+  transform: translate(-50%, -50%); opacity: 0;
+}
+.ftf-p-dust {
+  border-radius: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, rgba(240, 248, 214, .55) 0%, rgba(190, 220, 150, 0) 70%);
+}
+
+/* The blur lives on the field, not on an overlay, so the fence and the grass
+   soften together and she stays perfectly sharp on top of them.
+
+   One class, not a defocus/refocus pair: two classes of equal specificity made
+   the blur depend on which was removed first, which is exactly the kind of
+   cascade collision that works until it does not. Removing the class eases
+   back on its own. */
+#ftf-field { transition: filter 380ms ease; }
+#ftf-field.ftf-defocus { filter: blur(7px) saturate(.92) brightness(.88); }
+
+/* Only the goat. Blurring the field was not enough on its own: the sign, the
+   two cards, the question and the buttons all live OUTSIDE the field, so they
+   stayed sharp on top of the celebration. Everything that is not the field or
+   the celebration itself is faded right out for its duration.
+
+   !important is deliberate and is the only sane way here - almost every one of
+   these elements has its opacity set inline by the game, and an inline value
+   beats any class rule. */
+#ftf-stage.ftf-cheering > *:not(#ftf-cheer):not(#ftf-field) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 260ms ease !important;
+}
+/* Her field self goes too - the celebration goat is the same animal, and two
+   of her on screen at once would be absurd. */
+#ftf-stage.ftf-cheering #ftf-goat,
+#ftf-stage.ftf-cheering #ftf-goat-side,
+#ftf-stage.ftf-cheering #ftf-hand,
+#ftf-stage.ftf-cheering #ftf-hint-hand {
+  opacity: 0 !important; transition: opacity 200ms ease !important;
+}
+
+/* Sized in design-space pixels, not vw: the whole stage is already scaled by
+   one transform, so a fixed size here IS responsive - it rides that scale and
+   keeps her the same proportion of the farm on every screen. A vw value would
+   be measured against the real viewport and fight the stage scale. */
+/* Sized in real pixels by cheerFrame(), not in percentages. Percentage sizing
+   against a positioned ancestor resolved inconsistently here, and the frame
+   geometry is far too important to leave to it - the numbers come from the
+   window size and the grid, so a new sheet of the same layout still just works.
+   The shadow is on the image rather than on the animated window: a filter on a
+   transformed, animating box is the least reliable thing to ask a compositor
+   for, and it buys nothing. */
+
+
+@keyframes ftf-dust {
+  0%   { opacity: .3; transform: scale(.6, .6); }
+  100% { opacity: 0;  transform: scale(1.3, .8); }
+}
+/* Reduced motion: she is simply there, brightly, and the farm still softens.
+   No jump, no particles, no burst - but the moment still reads as a success. */
+@media (prefers-reduced-motion: reduce) {
+  #ftf-mascot, .ftf-part { animation: none !important; transition: none !important; }
+}
+
+/* --------------------------------------------- paced instruction text ---
+   Each word is laid out with the line, then only its opacity changes. That is
+   what lets the board be sized once, up front, and stay perfectly still while
+   the sentence arrives. */
+.ftf-w {
+  display: inline-block; opacity: 0; transform: translateY(3px);
+  transition: opacity 200ms ease, transform 200ms cubic-bezier(.22,.8,.36,1);
+}
+.ftf-w.ftf-in { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .ftf-w { opacity: 1; transform: none; transition: none; }
+}
+/* One settle when the sentence is complete: 4px up, 2px back, done. Any more
+   than this and a calm geometry game starts to feel like cartoon UI. */
+@keyframes ftf-plank-settle {
+  0%   { transform: translateX(-50%) translateY(0)    scale(1); }
+  38%  { transform: translateX(-50%) translateY(-4px) scale(1.012); }
+  70%  { transform: translateX(-50%) translateY(2px)  scale(.996); }
+  100% { transform: translateX(-50%) translateY(0)    scale(1); }
+}
+
+/* ------------------------------------------------------ idle hand cue ---
+   Shown only after the instruction has finished arriving AND the learner has
+   then been still for five seconds. Small, offset from the corner, and slow:
+   it is pointing something out, not demanding anything. */
+#ftf-hint-hand {
+  position: absolute; left: 0; top: 0; width: 46px; height: 55px; z-index: 912;
+  margin: -6px 0 0 -6px;
+  opacity: 0; pointer-events: none;
+  background: url('../assets/art/touch.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(-2px 4px 5px rgba(24, 52, 12, .45));
+  transition: opacity 150ms ease;
+}
+#ftf-hint-hand.ftf-in { opacity: 1; animation: ftf-hint-hand 2200ms ease-in-out infinite; }
+/* Reduced motion keeps the guidance but drops the travel: it breathes in place,
+   because the five-second cue is functional help, not decoration. */
+#ftf-hint-hand.ftf-still.ftf-in { animation: ftf-hint-breathe 2400ms ease-in-out infinite; }
+@keyframes ftf-hint-hand {
+  0%   { transform: translate(9px, 7px) scale(.95); }
+  26%  { transform: translate(0, 0)     scale(1); }
+  40%  { transform: translate(0, 0)     scale(.94); }
+  54%  { transform: translate(0, 0)     scale(1); }
+  100% { transform: translate(9px, 7px) scale(.95); }
+}
+@keyframes ftf-hint-breathe {
+  0%, 100% { opacity: .72; } 50% { opacity: 1; }
+}
+
+/* ------------------------------------------------ wood + hay materials --- */
+.ftf-wood {
+  padding: 8px; border-radius: 15px; border: 3px solid var(--wood-edge);
+  background: linear-gradient(180deg, var(--wood-hi) 0%, var(--wood-lo) 100%);
+  box-shadow: 0 6px 0 var(--wood-deep), 0 14px 24px rgba(0, 0, 0, .32);
+}
+.ftf-wood-in {
+  border-radius: 10px; border: 2px solid #E0C795; padding: 8px 22px 10px; text-align: center;
+  background: linear-gradient(180deg, #FFF8E6 0%, var(--paper-2) 100%);
+}
+.ftf-hay {
+  position: relative; padding: 10px; border-radius: 18px;
+  background: repeating-linear-gradient(116deg, var(--hay-a) 0 6px, var(--hay-b) 6px 11px, var(--hay-c) 11px 16px);
+  box-shadow: 0 7px 0 #9C7430, 0 16px 28px rgba(0, 0, 0, .3);
+}
+.ftf-hay-in {
+  border-radius: 11px; border: 2px solid var(--paper-edge); padding: 6px 14px 10px; text-align: center;
+  background: linear-gradient(180deg, var(--paper) 0%, #FAEFD4 100%);
+}
+/* ------------------------------------------------------- hanging signs ---
+   The supplied panel art, WHOLE. It is not sliced, tiled or retouched: the
+   board is a woven straw frame around a rope-hung board, and cutting it into
+   repeatable pieces was always going to show — the weave has a period, the
+   ropes only exist at the ends, and the board is not even centred in its own
+   frame. So the image is used intact at its true aspect, and the ropes are
+   clipped by the top of the STAGE rather than by a crop, which is how a sign
+   hanging from off-screen should read anyway.
+
+   The text sits in the board's measured rectangle, and fitSign() in game.js
+   steps the type down if a line would ever outrun it. */
+.ftf-sign {
+  position: relative;
+  width: var(--sign-w, 520px);
+  height: calc(var(--sign-w, 520px) / 3.6837);   /* 2096 x 569 */
+  background: url('../assets/art/sign.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 12px 18px rgba(24, 52, 12, .4));
+}
+/* The cream board, measured off the artwork. */
+.ftf-sign-m {
+  position: absolute; left: 15.51%; right: 19.13%; top: 44.99%; bottom: 19.51%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+}
+/* Nothing on a sign ever wraps. inline-block so each line's own width hugs
+   its text - fitSign measures that to scale the type up to fill the board. */
+.ftf-sign-m > * { display: inline-block; white-space: nowrap; }
+
+/* --------------------------------------------------------- counter card ---
+   The supplied counter art, with the cream board's own inset as the padding. */
+.ftf-card {
+  background: url('../assets/art/card.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 7px 12px rgba(24, 52, 12, .38));
+}
+.ftf-card-in { text-align: center; }
+
+/* ------------------------------------------------- instruction plank --- */
+#ftf-plank {
+  --sign-w: 520px;
+  position: absolute; left: 50%; top: -38px;
+  transform: translateX(-50%); transform-origin: 50% 0;
+  z-index: 1000; pointer-events: none; opacity: 0;
+}
+#ftf-plank-1 { font: 800 34px "Nunito", sans-serif; color: var(--ink); letter-spacing: -.2px; line-height: 1.05; }
+/* The level 3 challenge board physically turns over on its own axis. */
+#ftf-plank.ftf-flip { animation: ftf-flip 700ms cubic-bezier(.5, 0, .3, 1); }
+/* It drops in on its ropes, overshoots once and settles. */
+#ftf-plank.ftf-drop { animation: ftf-sign-drop 780ms cubic-bezier(.3, .7, .3, 1); }
+
+/* ------------------------------------------------------ record board --- */
+
+
+/* Small, unobtrusive, and only during the introductory beats. */
+#ftf-skip {
+  position: absolute; right: 24px; bottom: 22px; z-index: 1005;
+  opacity: 0; pointer-events: none; transition: opacity 300ms ease;
+  padding: 7px 16px 8px; border-radius: 999px; cursor: pointer;
+  border: 2px solid rgba(255, 246, 224, .5); background: rgba(38, 24, 8, .42);
+  font: 700 15px 'Nunito Sans', sans-serif; letter-spacing: .3px; color: #FFF3D6;
+}
+#ftf-skip.ftf-in { opacity: 1; pointer-events: auto; }
+#ftf-skip:hover { background: rgba(38, 24, 8, .66); }
+
+/* --------------------------------------------------------- bonus chip --- */
+#ftf-bonus {
+  position: absolute; left: 50%; bottom: 22px; z-index: 1000; opacity: 0;
+  pointer-events: none; transition: opacity 320ms ease, transform 320ms ease;
+  transform: translateX(-50%) translateY(8px);
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 16px 9px; border-radius: 999px;
+  border: 3px solid var(--wood-edge);
+  background: linear-gradient(180deg, #C79148 0%, #9A6B33 100%);
+  box-shadow: 0 5px 0 var(--wood-deep), 0 10px 18px rgba(0, 0, 0, .26);
+}
+#ftf-bonus.ftf-in { opacity: 1; transform: translateX(-50%) translateY(0); }
+.ftf-bonus-cap {
+  font: 800 13px 'Nunito Sans', sans-serif; letter-spacing: 2.2px; text-transform: uppercase;
+  color: #3E2409; background: var(--gold); padding: 3px 9px 4px; border-radius: 999px;
+}
+#ftf-bonus-txt { font: 800 20px 'Nunito', sans-serif; color: #FFF6E0; text-shadow: 0 2px 0 rgba(50, 30, 8, .5); }
+#ftf-bonus.ftf-done { background: linear-gradient(180deg, #86C63F 0%, #5C9A2C 100%); border-color: var(--green-edge); box-shadow: 0 5px 0 var(--green-edge); }
+
+/* ------------------------------------------------------- the question ---
+   Two choices under the instruction board. It borrows the board's own cream
+   and wood rather than introducing a quiz style of its own, and it is narrow
+   on purpose: it must read as part of the farm, not as a test dropped on top
+   of it. Only 8 words of question ever fit, which is the intended limit. */
+#ftf-ask {
+  position: absolute; left: 50%; top: 176px; z-index: 1001;
+  transform: translateX(-50%) translateY(-6px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 300ms ease, transform 300ms cubic-bezier(.34,1.4,.64,1);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: max-content; max-width: 620px;
+}
+#ftf-ask.ftf-in { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+#ftf-ask-q {
+  font: 800 20px 'Nunito', sans-serif; color: var(--ink);
+  background: var(--cream); padding: 7px 18px 8px; border-radius: 999px;
+  border: 3px solid var(--wood-edge);
+  box-shadow: 0 4px 0 var(--wood-deep), 0 8px 16px rgba(0, 0, 0, .22);
+  text-align: center;
+}
+#ftf-ask-row { display: flex; gap: 12px; }
+.ftf-ask-btn {
+  font: 800 18px 'Nunito', sans-serif; color: #FFF6E0; cursor: pointer;
+  padding: 9px 22px 11px; border-radius: 999px;
+  border: 3px solid var(--wood-edge);
+  background: linear-gradient(180deg, #C79148 0%, #9A6B33 100%);
+  box-shadow: 0 5px 0 var(--wood-deep), 0 9px 16px rgba(0, 0, 0, .24);
+  text-shadow: 0 2px 0 rgba(50, 30, 8, .5);
+  transition: transform 90ms ease, filter 140ms ease;
+}
+.ftf-ask-btn:hover { filter: brightness(1.08); }
+.ftf-ask-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--wood-deep); }
+/* The chosen answer stays lit while the feedback is read, so the player can
+   see what they picked. Neither state is a red cross: a wrong guess here is
+   a reason to look at the locked value again, not a failure. */
+.ftf-ask-btn.ftf-picked  { background: linear-gradient(180deg, #86C63F 0%, #5C9A2C 100%); border-color: var(--green-edge); box-shadow: 0 5px 0 var(--green-edge); }
+.ftf-ask-btn.ftf-rethink { background: linear-gradient(180deg, #E6A93C 0%, #C1832A 100%); }
+.ftf-ask-btn[disabled]   { cursor: default; opacity: .55; }
+#ftf-ask-fb {
+  font: 700 17px 'Nunito Sans', sans-serif; color: var(--cream);
+  text-shadow: 0 2px 0 var(--ink), 0 3px 9px rgba(0, 0, 0, .45);
+  opacity: 0; transition: opacity 240ms ease; min-height: 22px; text-align: center;
+}
+#ftf-ask-fb.ftf-in { opacity: 1; }
+
+/* ------------------------------------------------------ fence readout ---
+   Constant, small, quiet, never animated (§UI hierarchy). */
+/* The supplied counter card. Its cream board is inset 23/236 across and
+   12/140 down, so the text sits exactly on the wood. */
+#ftf-fence-badge {
+  position: absolute; right: 26px; top: 22px; z-index: 1000; pointer-events: none;
+  opacity: 0; transition: opacity 400ms ease;
+  width: 190px; height: 113px;
+  background: url('../assets/art/card.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 7px 12px rgba(24, 52, 12, .4));
+}
+#ftf-fence-badge .ftf-card-in {
+  position: absolute; left: 9.7%; right: 5.9%; top: 8.6%; bottom: 15.7%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ftf-badge-cap { font: 700 14px 'Nunito Sans', sans-serif; letter-spacing: 2.4px; text-transform: uppercase; color: #8A6432; }
+/* FIXED, with a small drawn padlock. The word alone would read as a label;
+   the padlock is what makes the constraint feel like a constraint. */
+.ftf-badge-lock {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  margin-top: -1px;
+  font: 800 10.5px 'Nunito Sans', sans-serif; letter-spacing: 1.6px;
+  text-transform: uppercase; color: #A07A45;
+}
+.ftf-lock-i {
+  width: 7px; height: 6px; border-radius: 1px; background: #A07A45; position: relative;
+}
+.ftf-lock-i::before {
+  content: ''; position: absolute; left: 1px; top: -4px; width: 5px; height: 4px;
+  border: 1.5px solid #A07A45; border-bottom: 0; border-radius: 3px 3px 0 0;
+}
+/* One pulse, when the player needs reminding what has not moved. */
+@keyframes ftf-lock-pulse {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  32%  { transform: scale(1.07); filter: brightness(1.16); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+#ftf-fence-val { font: 700 34px 'Osmose', 'Nunito', sans-serif; color: var(--ink); line-height: 1.04; }
+
+/* -------------------------------------------------------- area readout ---
+   The hero: roughly three times the visual weight of the fence value. It sits
+   low and right of the pasture, outside the handle's whole legal sweep. */
+/* The supplied score board, whole and at its true aspect (185 x 107). Its
+   inner panel was measured off the artwork, so the number sits exactly on the
+   wood rather than being nudged into place by eye. Kept at 224 wide so its
+   left edge clears the drag handle's furthest reach by a clear margin. */
+#ftf-area-card {
+  position: absolute; right: 26px; top: 428px; width: 224px; height: 129.5px;
+  z-index: 1000; pointer-events: none; opacity: 0; transition: opacity 400ms ease;
+  background: url('../assets/art/area-card.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 8px 14px rgba(24, 52, 12, .42));
+}
+.ftf-area-in {
+  position: absolute; left: 6.49%; right: 7.03%; top: 12.15%; bottom: 13.08%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#ftf-burst {
+  position: absolute; left: 50%; top: 50%; width: 260px; height: 260px;
+  margin: -130px 0 0 -130px; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 222, 130, .7) 0%, rgba(255, 200, 80, .26) 42%, rgba(255, 200, 80, 0) 70%);
+  transition: opacity 420ms ease;
+}
+.ftf-area-row { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+#ftf-area-val {
+  display: inline-block; font: 700 62px 'Osmose', 'Nunito', sans-serif;
+  color: var(--area-ink); line-height: .96; transform-origin: 50% 60%;
+}
+.ftf-area-unit { font: 700 26px 'Osmose', 'Nunito', sans-serif; color: var(--area-unit); }
+.ftf-area-cap { font: 700 15px 'Nunito Sans', sans-serif; letter-spacing: 1.8px; text-transform: uppercase; color: var(--cap); margin-top: -1px; }
+
+/* ------------------------------------------------------ performance meter ---
+   A thin golden path with a token. No axes, no grid: this reads as a meter,
+   not as school graphing, until the advanced reveal turns it into a graph. */
+#ftf-curve {
+  position: absolute; right: 26px; top: 566px; width: 224px; height: 120px;
+  z-index: 1000; opacity: 0; pointer-events: none;
+  border-radius: 16px; padding: 4px;
+  background: rgba(38, 24, 8, .5);
+  box-shadow: inset 0 0 0 2px rgba(255, 246, 224, .18);
+  transition: opacity 400ms ease, right 700ms cubic-bezier(.4,0,.2,1),
+              top 700ms cubic-bezier(.4,0,.2,1), width 700ms cubic-bezier(.4,0,.2,1),
+              height 700ms cubic-bezier(.4,0,.2,1), background 700ms ease;
+}
+#ftf-curve svg { display: block; width: 100%; height: 100%; overflow: visible; }
+#ftf-curve-path { fill: none; stroke: rgba(255, 200, 96, .8); stroke-width: 3; stroke-linecap: round; }
+#ftf-curve-tok {
+  fill: var(--gold); stroke: #7A4A08; stroke-width: 2.5;
+  filter: drop-shadow(0 0 6px rgba(255, 194, 74, .95));
+  transition: cx 150ms cubic-bezier(.4,0,.2,1), cy 150ms cubic-bezier(.4,0,.2,1);
+}
+#ftf-curve-drop { stroke: rgba(255, 246, 224, .5); stroke-width: 2; stroke-dasharray: 4 5; opacity: 0; }
+#ftf-curve-axes { opacity: 0; transition: opacity 500ms ease; }
+.ftf-ax { stroke: rgba(255, 246, 224, .8); stroke-width: 2.5; stroke-linecap: round; }
+.ftf-curve-lbl {
+  position: absolute; opacity: 0; transition: opacity 500ms ease; white-space: nowrap;
+  font: 700 15px 'Nunito Sans', sans-serif; letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--cream); text-shadow: 0 2px 0 rgba(40, 70, 20, .8);
+}
+#ftf-curve-lbl-x { left: 50%; bottom: -22px; transform: translateX(-50%); }
+#ftf-curve-lbl-y { left: -10px; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: 0 0; }
+#ftf-curve-peak {
+  position: absolute; left: 50%; top: -30px; transform: translateX(-50%); opacity: 0;
+  transition: opacity 400ms ease; white-space: nowrap;
+  font: 800 19px 'Nunito', sans-serif; color: #3E2409;
+  background: var(--gold); padding: 4px 14px 5px; border-radius: 999px;
+  box-shadow: 0 3px 0 var(--gold-deep), 0 8px 16px rgba(0, 0, 0, .3);
+}
+#ftf-curve.ftf-graph { right: 40px; top: 150px; width: 590px; height: 400px; background: rgba(38, 24, 8, .42); }
+#ftf-curve.ftf-graph #ftf-curve-axes, #ftf-curve.ftf-graph .ftf-curve-lbl { opacity: 1; }
+#ftf-curve.ftf-graph #ftf-curve-path { stroke: var(--gold); stroke-width: 4; }
+#ftf-curve.ftf-graph #ftf-curve-drop { opacity: 1; }
+
+/* ------------------------------------------------------------ buttons --- */
+/* ------------------------------------------------------------ buttons ---
+   Built in CSS from the PLAY sprite's own palette, so every button in the
+   game belongs to the same set: a bright yellow-to-red-orange bezel, a
+   glossy face inside it, and a hard bottom edge that compresses on press.
+   Sampled from btn-play-idle.png: #FCD202 / #FB8302 / #EF5000 / #EB2201. */
+.ftf-btn {
+  position: relative; padding: 0 34px; height: 60px; cursor: pointer;
+  border: 5px solid transparent; border-radius: 999px;
+  font: 800 26px 'Nunito', sans-serif; color: #FFF7DA;
+  text-shadow: 0 2px 0 #C0390A, 0 3px 7px rgba(120, 40, 0, .45);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .58) 0%, rgba(255, 255, 255, .06) 40%, rgba(255, 255, 255, 0) 52%) padding-box,
+    linear-gradient(180deg, #FFDA0C 0%, #FDB202 28%, #FB7C02 62%, #E84203 100%) padding-box,
+    linear-gradient(180deg, #FFE838 0%, #FDAE02 42%, #CE2802 100%) border-box;
+  box-shadow: inset 0 -5px 9px rgba(176, 44, 2, .4), 0 5px 0 #A82702, 0 11px 18px rgba(60, 20, 0, .36);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 140ms ease;
+}
+.ftf-btn:hover { transform: translateY(-2px); filter: saturate(1.08) brightness(1.06); box-shadow: 0 7px 0 #B32C02, 0 14px 22px rgba(60, 20, 0, .36), 0 0 22px rgba(255, 168, 20, .55); }
+.ftf-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #B32C02, 0 4px 8px rgba(60, 20, 0, .3); }
+/* The quiet member of the family: same gloss, deeper amber, so it never
+   competes with the primary action beside it. */
+.ftf-btn-wood {
+  color: #FFEFCB;
+  text-shadow: 0 2px 0 #6B3208, 0 3px 7px rgba(70, 30, 0, .45);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .3) 0%, rgba(255, 255, 255, 0) 46%) padding-box,
+    linear-gradient(180deg, #E0A03A 0%, #C0762A 52%, #96501A 100%) padding-box,
+    linear-gradient(180deg, #EFB74C 0%, #C0762A 44%, #7C3C10 100%) border-box;
+  box-shadow: 0 5px 0 #6B3208, 0 11px 18px rgba(50, 22, 0, .3);
+}
+.ftf-btn-wood:hover { box-shadow: 0 7px 0 #6B3208, 0 14px 22px rgba(50, 22, 0, .32), 0 0 18px rgba(224, 160, 58, .45); }
+.ftf-btn-wood:active { box-shadow: 0 1px 0 #6B3208, 0 4px 8px rgba(50, 22, 0, .28); }
+.ftf-btn-sm { height: 50px; padding: 0 26px; font-size: 21px; border-width: 4px; }
+.ftf-btn-lg { height: 74px; padding: 0 44px; font-size: 30px; border-width: 6px; }
+.ftf-btn-xl { height: 92px; padding: 0 66px; font-size: 44px; border-width: 7px; letter-spacing: 1.5px; text-transform: uppercase; }
+.ftf-btn-xl { box-shadow: 0 7px 0 #B32C02, 0 15px 26px rgba(60, 20, 0, .38); }
+.ftf-btn-xl:hover { box-shadow: 0 9px 0 #B32C02, 0 18px 30px rgba(60, 20, 0, .4), 0 0 30px rgba(255, 168, 20, .6); }
+.ftf-btn-xl:active { box-shadow: 0 2px 0 #B32C02, 0 5px 10px rgba(60, 20, 0, .34); }
+.ftf-focus:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
+#ftf-handle.ftf-focus:focus-visible { box-shadow: 0 0 0 4px var(--focus); }
+
+#ftf-next {
+  position: absolute; right: 26px; top: 620px; width: 224px; height: 62px;
+  padding: 0; z-index: 1000; opacity: 0; pointer-events: none;
+}
+/* During a recap it sits in the gap between the two builds. */
+#ftf-next.ftf-mid { right: auto; left: 50%; margin-left: -112px; top: 648px; }
+
+/* ================================================== SCREEN 1 · TITLE === */
+#ftf-title { position: absolute; inset: 0; z-index: 260; pointer-events: none; }
+#ftf-title::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 250px;
+  background: linear-gradient(180deg, rgba(20, 40, 8, .3) 0%, rgba(20, 40, 8, 0) 100%);
+}
+/* Pulled up so more of the rope runs off the top of the frame and the board
+   itself sits high, leaving the open field to the goat and the button. */
+.ftf-title-top { position: absolute; left: 0; right: 0; top: -30px; text-align: center; }
+/* The hanging title sign. Its ropes run off the top of the stage, so it can
+   swing in from above the frame and settle on them. */
+#ftf-logo {
+  display: block; width: 660px; height: auto; margin: 0 auto;
+  filter: drop-shadow(0 14px 26px rgba(24, 52, 12, .48));
+  transform-origin: 50% 0;
+}
+.ftf-title-bottom { position: absolute; left: 0; right: 0; bottom: 24px; text-align: center; }
+/* Leaving: the board is hauled up its ropes and the button drops away, so
+   the title reads as a sign being taken down, not a screen being replaced. */
+/* The two departure animations are applied inline from startGame, because
+   the arrival is inline too and an inline style outranks any class rule. */
+#ftf-title.ftf-lift::before { opacity: 0; transition: opacity 420ms ease; }
+#ftf-play { pointer-events: auto; }
+.ftf-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+
+/* ======================================================== FINALE === */
+#ftf-fin { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+/* Each build's figures sit on the same score board the area readout uses.
+   Floating cream text on cartoon grass is hard to read at any size; on the
+   board it is legible and it matches the rest of the HUD. */
+/* Scaled up with the pens. This pair of cards IS the explanation on this
+   screen, so it has to be readable at a glance from across a classroom rather
+   than politely small. */
+.ftf-cmp-lbl {
+  position: absolute; top: 512px; width: 320px; height: 185px;
+  opacity: 0; transition: opacity 420ms ease;
+  background: url('../assets/art/area-card.png') 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 9px 16px rgba(24, 52, 12, .44));
+}
+.ftf-cmp-in {
+  position: absolute; left: 6.49%; right: 7.03%; top: 12.15%; bottom: 13.08%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+}
+#ftf-fin-a-lbl { left: 250px; }
+#ftf-fin-b-lbl { left: 830px; }
+.ftf-cmp-tag {
+  font: 800 16px 'Nunito Sans', sans-serif; letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--cap);
+}
+.ftf-cmp-fence, .ftf-cmp-per { font: 700 20px 'Nunito Sans', sans-serif; color: var(--ink-soft); }
+.ftf-cmp-fence i { font-style: normal; font-weight: 800; color: var(--ink); }
+.ftf-cmp-per { opacity: 0; transition: opacity 400ms ease; }
+.ftf-cmp-per b { font-weight: 800; color: #C8871B; }
+.ftf-cmp-area { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-top: 1px; opacity: 0; transition: opacity 400ms ease; }
+.ftf-cmp-area span {
+  font: 700 54px "Osmose", "Nunito", sans-serif; color: var(--area-ink); line-height: 1;
+}
+.ftf-cmp-area i { font: 700 23px "Osmose", "Nunito", sans-serif; font-style: normal; color: var(--area-unit); }
+
+/* The emblem that assembles when the peak is found. */
+#ftf-emblem {
+  position: absolute; left: 50%; top: 452px; width: 560px; transform: translateX(-50%);
+  z-index: 1010; display: none; text-align: center;
+}
+#ftf-emblem .ftf-hay-in { padding: 12px 20px 14px; }
+.ftf-emb-1 { font: 700 34px 'Osmose', 'Nunito', sans-serif; color: var(--ink); line-height: 1.06; }
+.ftf-emb-2 { margin-top: 3px; font: 800 22px 'Nunito', sans-serif; color: var(--area-ink); }
+.ftf-emb-3 { margin-top: 3px; font: 600 15px 'Nunito Sans', sans-serif; color: var(--cap); }
+#ftf-emblem .ftf-btn { pointer-events: auto; margin-top: 14px; }
+
+/* ============================================ FORMULA, IN THE FIELD === */
+#ftf-fm { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+.ftf-fm-block { position: absolute; left: 700px; width: 320px; opacity: 0; transition: opacity 460ms ease; }
+#ftf-fm-per { top: 152px; }
+#ftf-fm-area { top: 372px; }
+.ftf-fm-cap {
+  font: 700 15px 'Nunito Sans', sans-serif; letter-spacing: 2.6px; text-transform: uppercase;
+  color: #FFF3D0; text-shadow: 0 2px 0 rgba(40, 70, 20, .8);
+}
+.ftf-fm-eq { margin-top: 3px; font: 700 34px "Nunito", sans-serif; text-shadow: 0 3px 0 rgba(30, 40, 60, .35); }
+.ftf-fm-eq-p { color: #CFE0FF; }
+.ftf-fm-eq-a { color: #CFF3E4; }
+.ftf-fm-sub { margin-top: 1px; font: 600 22px "Nunito Sans", sans-serif; color: #F4EBCE; opacity: 0; transition: opacity 380ms ease; text-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
+.ftf-fm-res {
+  display: inline-block; margin-top: 7px; opacity: 0;
+  transition: opacity 380ms ease, transform 420ms cubic-bezier(.34,1.4,.64,1);
+  transform: scale(.9);
+  font: 700 34px "Osmose", "Nunito", sans-serif;
+  padding: 3px 16px 5px; border-radius: 11px;
+}
+.ftf-fm-res.ftf-in { opacity: 1; transform: scale(1); }
+.ftf-fm-res-p { color: #1B2A5A; background: linear-gradient(180deg, #DCE8FF 0%, #B9CCF2 100%); box-shadow: 0 4px 0 #7E90BC; }
+.ftf-fm-res-a { color: #12452F; background: linear-gradient(180deg, #DCF7E4 0%, #B3E5C6 100%); box-shadow: 0 4px 0 #74AE8B; }
+#ftf-fm-core {
+  position: absolute; left: 0; right: 320px; top: 618px; text-align: center; opacity: 0;
+  transition: opacity 500ms ease;
+  display: flex; align-items: baseline; justify-content: center; gap: 14px; flex-wrap: wrap;
+}
+.ftf-core-1, .ftf-core-3 { font: 700 40px 'Osmose', 'Nunito', sans-serif; color: var(--cream); text-shadow: 0 4px 0 var(--ink), 0 8px 18px rgba(0, 0, 0, .5); }
+.ftf-core-3 { color: #FFE08A; }
+.ftf-core-2 { font: 600 21px 'Nunito Sans', sans-serif; color: #EFFFD2; text-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
+#ftf-fm-act {
+  position: absolute; right: 26px; bottom: 26px; display: flex; align-items: center; gap: 12px;
+  opacity: 0; transition: opacity 400ms ease;
+}
+#ftf-fm-act .ftf-btn { pointer-events: auto; }
+
+/* ================================================ ADVANCED ALGEBRA === */
+#ftf-adv { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+.ftf-adv-card { position: absolute; left: 40px; top: 172px; width: 520px; }
+.ftf-adv-in { padding: 18px 24px 18px; text-align: left; }
+.ftf-adv-row { opacity: 0; transition: opacity 420ms ease; margin-bottom: 12px; }
+.ftf-adv-row:last-child { margin-bottom: 0; }
+.ftf-adv-eq { font: 700 32px 'Nunito', sans-serif; color: #383882; }
+.ftf-adv-eq-a { color: #1D7070; }
+.ftf-adv-note { display: block; margin-top: 1px; font: 600 17px 'Nunito Sans', sans-serif; color: var(--cap); }
+.ftf-adv-last { padding-top: 14px; border-top: 2px solid #EFE0BE; }
+.ftf-adv-last > div { font: 800 21px 'Nunito', sans-serif; color: var(--ink); margin-bottom: 12px; }
+.ftf-adv-last .ftf-btn { pointer-events: auto; }
+
+/* ==================================================== COMPLETION === */
+#ftf-complete { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+#ftf-badge {
+  --sign-w: 700px;
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+}
+.ftf-done-title { font: 700 36px "Osmose", "Nunito", sans-serif; color: var(--ink); line-height: 1.04; }
+.ftf-done-sub { margin-top: 1px; font: 700 19px "Nunito Sans", sans-serif; color: var(--grass-ink); }
+#ftf-complete-foot { position: absolute; left: 0; right: 0; top: 532px; text-align: center; }
+.ftf-done-count {
+  font: 700 20px 'Nunito Sans', sans-serif; letter-spacing: 2.6px; text-transform: uppercase;
+  color: var(--cream); text-shadow: 0 2px 0 var(--ink), 0 3px 10px rgba(0, 0, 0, .5);
+}
+.ftf-done-btns { display: flex; gap: 16px; justify-content: center; margin-top: 16px; }
+.ftf-done-btns button { pointer-events: auto; }
+
+/* ======================================================= EXPLORE === */
+#ftf-explore { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
+#ftf-explore-bar {
+  position: absolute; left: 50%; top: 20px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px;
+  padding: 9px 18px 10px; border-radius: 999px;
+  background: rgba(38, 24, 8, .58); backdrop-filter: blur(2px);
+}
+.ftf-explore-cap {
+  font: 700 14px 'Nunito Sans', sans-serif; letter-spacing: 2.2px; text-transform: uppercase;
+  color: #FFEFC4;
+}
+#ftf-explore-chips { display: flex; gap: 8px; }
+/* Same family as the buttons, one step quieter until chosen. */
+.ftf-chip {
+  pointer-events: auto; cursor: pointer; padding: 5px 16px 6px;
+  border: 3px solid transparent; border-radius: 999px;
+  font: 800 19px 'Nunito', sans-serif; color: #FFEFCB; white-space: nowrap;
+  text-shadow: 0 2px 0 #6B3208;
+  background:
+    linear-gradient(180deg, #D9993A 0%, #B06B24 52%, #8A4816 100%) padding-box,
+    linear-gradient(180deg, #E8AE49 0%, #A85F1E 100%) border-box;
+  box-shadow: 0 3px 0 #6B3208;
+  transition: transform 130ms ease, box-shadow 130ms ease;
+}
+.ftf-chip:hover { transform: translateY(-2px); box-shadow: 0 5px 0 #6B3208; }
+.ftf-chip[aria-pressed="true"] {
+  color: #FFF7DA; text-shadow: 0 2px 0 #C0390A;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .4) 0%, rgba(255, 255, 255, 0) 46%) padding-box,
+    linear-gradient(180deg, #FDD204 0%, #FB8B02 52%, #EF5200 100%) padding-box,
+    linear-gradient(180deg, #FFDE12 0%, #FBA002 44%, #DE3402 100%) border-box;
+  box-shadow: 0 3px 0 #B32C02, 0 0 16px rgba(255, 168, 20, .5);
+}
+#ftf-explore-exit { position: absolute; right: 26px; bottom: 26px; pointer-events: auto; }
+
+/* ------------------------------------------------------------- loader --- */
+#ftf-loader {
+  position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 1500;
+  font: 600 15px 'Nunito Sans', sans-serif; letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(255, 246, 224, .7);
+}
+
+/* ---------------------------------------------------------- keyframes --- */
+@keyframes ftf-breathe { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.14); opacity: .9; } }
+/* Locked to ftf-hand: the finger rests on the post at 0%, so the ripple
+   leaves the post at 0% and has faded before the hand pulls away. Both run
+   1900ms and are started together, so they never drift apart. */
+@keyframes ftf-ring {
+  0%   { transform: scale(.55); opacity: .75; }
+  30%  { transform: scale(1.05); opacity: .35; }
+  55%  { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+/* A post rises out of the grass with a tiny overshoot (§fence transfer). */
+/* The goat's own small reactions. All three are deliberately tiny and short:
+   she is a character beside the lesson, not the lesson. */
+@keyframes ftf-goat-arc   { 0% { transform: scale(.5) rotate(-8deg); opacity: 0; }
+                            30% { opacity: .9; }
+                            100% { transform: scale(1.5) rotate(-8deg); opacity: 0; } }
+@keyframes ftf-goat-crumb { 0% { transform: translate(0,0) rotate(0deg); opacity: .95; }
+                            100% { transform: translate(0,-7px) rotate(38deg); opacity: 0; } }
+@keyframes ftf-goat-spark { 0% { transform: scale(0); opacity: 0; }
+                            35% { transform: scale(1); opacity: 1; }
+                            100% { transform: scale(.4); opacity: 0; } }
+
+/* A post is a disc from overhead, so it is set DOWN into the grass rather than
+   raised out of it: it scales about its own centre. Squashing it in y alone -
+   which is what a post standing up wants - would read as an ellipse. */
+@keyframes ftf-rise    { 0% { transform: scale(.24); opacity: 0; } 72% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes ftf-sink    { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(.12); opacity: 0; } }
+/* Rails extend from the post that is already standing. */
+@keyframes ftf-railin  { 0% { transform: scaleX(.05); opacity: .25; } 100% { transform: scaleX(1); opacity: 1; } }
+@keyframes ftf-railout { 0% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(.05); opacity: 0; } }
+@keyframes ftf-railin-v  { 0% { transform: scaleY(.05); opacity: .25; } 100% { transform: scaleY(1); opacity: 1; } }
+@keyframes ftf-railout-v { 0% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(.05); opacity: 0; } }
+@keyframes ftf-puff    { 0% { transform: scale(.25); opacity: .5; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes ftf-plank-in { 0% { transform: translateX(-50%) translateY(-150px); } 76% { transform: translateX(-50%) translateY(6px); } 100% { transform: translateX(-50%) translateY(0); } }
+/* A sign drops in on its ropes, overshoots once and settles. */
+@keyframes ftf-sign-drop {
+  0%   { transform: translateX(-50%) translateY(-190px) rotate(-2deg); }
+  58%  { transform: translateX(-50%) translateY(11px) rotate(1.4deg); }
+  78%  { transform: translateX(-50%) translateY(-5px) rotate(-.7deg); }
+  92%  { transform: translateX(-50%) translateY(2px) rotate(.3deg); }
+  100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+}
+/* The challenge plank and the record board turn over on their own axis. */
+@keyframes ftf-flip { 0% { transform: perspective(700px) rotateX(0deg); } 50% { transform: perspective(700px) rotateX(-90deg); } 100% { transform: perspective(700px) rotateX(0deg); } }
+/* Area up and down. Never red, never a fail state (§wrong feedback). */
+@keyframes ftf-pop  { 0% { transform: scale(1); } 42% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes ftf-dip  { 0% { transform: scale(1); } 42% { transform: scale(.96); } 100% { transform: scale(1); } }
+@keyframes ftf-hero { 0% { transform: scale(1); } 30% { transform: scale(1.22); } 100% { transform: scale(1); } }
+@keyframes ftf-dash { to { background-position: 24px 0; } }
+/* The mirror is baked into the artwork, so this is a plain nudge - and the
+   hand still points the right way when the animation is switched off. */
+@keyframes ftf-hand {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-26px, 26px); }
+}
+@keyframes ftf-fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ftf-card-in { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* The title sign drops in from above the frame, overshoots on its ropes and
+   settles. One big entrance, then it is still (§animation quality rules). */
+@keyframes ftf-logo-drop {
+  0%   { transform: translateY(-420px) rotate(-3deg); }
+  52%  { transform: translateY(26px) rotate(1.8deg); }
+  70%  { transform: translateY(-12px) rotate(-1.2deg); }
+  84%  { transform: translateY(5px) rotate(.6deg); }
+  93%  { transform: translateY(-2px) rotate(-.25deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* -------------------------------------------------- reduced motion ---
+   Scoped, not global: the decorative loops stop, but fence position, the
+   area value and every state indication still change immediately. */
+@media (prefers-reduced-motion: reduce) {
+  #ftf-glow, #ftf-ring, #ftf-hand, #ftf-guide, #ftf-plank-body, #ftf-logo { animation: none !important; }
+  #ftf-burst { display: none; }
+  .ftf-btn { transition: none; }
+  .ftf-btn:hover, .ftf-btn:active { transform: none; }
+  #ftf-curve, #ftf-curve-tok { transition: none; }
+}
+
+/* ------------------------------------------------------------- debug --- */
+#ftf-debug {
+  position: absolute; left: 16px; top: 16px; width: 288px; max-height: 688px; overflow: auto;
+  z-index: 1600; display: none; padding: 13px; border-radius: 14px;
+  background: rgba(14, 14, 48, .93); border: 1px solid #383882;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .45); font-family: 'Nunito Sans', sans-serif;
+}
+.ftf-dbg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;
+  font: 700 12px 'Nunito Sans', sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #5BC4C4; }
+.ftf-dbg-key { font: 600 11px 'Nunito Sans', sans-serif; letter-spacing: 0; text-transform: none; color: #8282E8; }
+#ftf-debug-stats { margin: 0 0 11px; padding: 9px; border-radius: 8px; background: rgba(56, 56, 130, .35);
+  font: 600 12px/1.5 ui-monospace, monospace; color: #D5D5FA; white-space: pre-wrap; }
+.ftf-dbg-cap { font: 700 11px 'Nunito Sans', sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #8282E8; margin: 0 0 5px; }
+.ftf-dbg-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 11px; }
+#ftf-dimdebug {
+  position: absolute; left: 16px; bottom: 16px; z-index: 1550; display: none;
+  padding: 8px 12px; border-radius: 10px; background: rgba(14, 14, 48, .88);
+  font: 700 15px/1.5 ui-monospace, monospace; color: #5BC4C4; white-space: pre;
+}
+#ftf-strings { display: none; }
+#ftf-a11y { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* The title board leaving on its ropes, and the button dropping away under it.
+   Same motion language as the instruction sign arriving, so the two read as
+   one continuous piece of signage rather than as two separate screens. */
+@keyframes ftf-sign-away {
+  0%   { transform: translateY(0) rotate(0deg); }
+  16%  { transform: translateY(16px) rotate(-1.2deg); }
+  100% { transform: translateY(-470px) rotate(2.6deg); }
+}
+@keyframes ftf-btn-away {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(120px); opacity: 0; }
+}

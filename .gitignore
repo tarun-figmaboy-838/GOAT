@@ -1,0 +1,10 @@
+# Test harnesses. These are generated next to index.html while probing the game
+# and are always deleted afterwards - this keeps a stray one from being
+# committed if a session is interrupted mid-run.
+__*.js
+__*.html
+__*.ps1
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store

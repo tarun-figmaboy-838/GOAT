@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fence the Farm — LAB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- Designed at 1280 x 720 and scaled from there (§responsive design). -->
+<div id="ftf-root">
+  <div id="ftf-stage">
+
+    <img id="ftf-grass" src="assets/art/grass-bg.png" alt="">
+    <!-- Level lighting: the only thing that changes between farms (§level variation). -->
+    <div id="ftf-light"></div>
+    <div id="ftf-vig"></div>
+
+    <!-- ================= PLAYFIELD =================
+         Everything here is positioned from the one shape state, so the picture
+         can never disagree with the number. -->
+    <div id="ftf-field">
+      <div id="ftf-ghost"></div>
+      <div id="ftf-fill"></div>
+      <div id="ftf-grid"></div>
+      <div id="ftf-guide"></div>
+      <div id="ftf-modules"></div>
+
+      <!-- The measuring tracer that walks both perimeters in the finale.
+           Each run is drawn three times: a blurred warm bloom, a dark casing
+           that gives it a crisp edge against the wood, and a bright core. All
+           three share one dash animation, so they grow as a single stroke. -->
+      <svg id="ftf-trace" viewBox="0 0 1280 720" aria-hidden="true">
+        <rect id="ftf-trace-a-gl" class="ftf-trace-glow" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+        <rect id="ftf-trace-b-gl" class="ftf-trace-glow" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+        <rect id="ftf-trace-a-bg" class="ftf-trace-bg" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+        <rect id="ftf-trace-b-bg" class="ftf-trace-bg" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+        <rect id="ftf-trace-a" class="ftf-trace-hi" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+        <rect id="ftf-trace-b" class="ftf-trace-hi" x="0" y="0" width="0" height="0" pathLength="100"></rect>
+      </svg>
+
+      <!-- Ambient farm life: cloud shadows drifting over the grass, and two
+           butterflies working the corners. Nothing is drawn ON the grass -
+           earlier tufts and pollen read as shapes stuck on the texture rather
+           than as the field being alive, so they were removed. The shadows sit
+           UNDER the fence, so wherever the pasture is dragged the fence and its
+           green fill lie on top. A fixed set of elements, all CSS-animated, so
+           there is nothing to create or clean up per frame. -->
+      <div id="ftf-amb" aria-hidden="true">
+        <div class="ftf-cloud ftf-cloud-1"></div>
+        <div class="ftf-cloud ftf-cloud-2"></div>
+      </div>
+
+      <!-- The goat. The outer box carries her place in the field, her heading and
+           her scale; the inner box carries only the sprite sheet and the frame,
+           so a frame change can never disturb the movement transform. -->
+      <!-- Two goats, one animal. The title is a portrait, so she is seen from
+           the side there and looks at the player; the farm is drawn from
+           overhead, so she is a plan view in the field. Pressing Play tilts
+           the camera, and these two cross over during that tilt. -->
+      <img id="ftf-goat-side" alt="">
+      <div id="ftf-goat" aria-hidden="true"><div id="ftf-goat-sprite"></div></div>
+
+      <div id="ftf-dim-w" class="ftf-dim">5 m</div>
+      <div id="ftf-dim-h" class="ftf-dim">5 m</div>
+
+      <!-- Shown once, before the first touch, then removed permanently. -->
+      <div id="ftf-hand"></div>
+      <!-- The small idle hand. Distinct from the tutorial hand above: this one
+           is an attention cue, not a character, so it is a third of the size
+           and sits beside the corner rather than over it. -->
+      <div id="ftf-hint-hand" aria-hidden="true"></div>
+
+      <button id="ftf-handle" type="button" class="ftf-focus" aria-label="Fence shape control">
+        <span id="ftf-glow"></span>
+        <span id="ftf-ring"></span>
+      </button>
+    </div>
+
+    <!-- ================= HUD ================= -->
+
+    <!-- The hanging sign. Instruction, challenge and consequence all speak
+         here, so two messages can never stack up on screen. It is the supplied
+         panel art used whole; fitSign scales the line to fill its board. -->
+    <div id="ftf-plank" class="ftf-sign">
+      <span class="ftf-sign-m">
+        <span id="ftf-plank-1" data-i18n="instruction.drag">Drag this corner</span>
+      </span>
+    </div>
+
+    <!-- Returning players can step straight into the interactive part. -->
+    <button id="ftf-skip" type="button" class="ftf-focus" data-i18n="action.skip">Skip tutorial</button>
+
+    <!-- Level 4 furniture: the optional exact-area build. -->
+    <!-- The bonus objective has no bar of its own: it speaks through the sign
+         like every other objective, so the bottom of the screen stays clear. -->
+    <div id="ftf-bonus" hidden><span id="ftf-bonus-txt"></span></div>
+
+    <!-- The level-complete celebration. Wordless on purpose: the farm falls
+         out of focus, she is the only thing left in front of it, and her jump
+         says the whole thing. No panel, no badge, no "Level Complete". -->
+    <div id="ftf-cheer" aria-hidden="true">
+      <!-- Three layers so the celebration has depth: rings and the heavier
+           confetti behind her, the character, then the sparkles and light
+           confetti in front. Putting everything in front would flatten her. -->
+      <div id="ftf-mascot-back"></div>
+      <!-- The mascot. Two image layers that swap roles, so a pose change is a
+           short dissolve rather than a hard cut - which is what hides the
+           differing transparent padding between the supplied PNGs. The wrapper
+           carries the whole performance, so a pose change can never disturb
+           the motion. -->
+      <div id="ftf-mascot">
+        <img id="ftf-pose-a" class="ftf-pose" alt="">
+        <img id="ftf-pose-b" class="ftf-pose" alt="">
+      </div>
+      <div id="ftf-mascot-front"></div>
+    </div>
+
+    <!-- One short question with two answers, used twice: to check that the
+         player noticed what stayed fixed, and to take their prediction before
+         the stretch experiment. Deliberately small and close under the sign -
+         a full-width quiz card would turn the farm into a worksheet. -->
+    <div id="ftf-ask" aria-live="polite">
+      <div id="ftf-ask-q">What stayed the same?</div>
+      <div id="ftf-ask-row"></div>
+      <div id="ftf-ask-fb"></div>
+    </div>
+
+    <!-- Constant. Small, quiet, never animated (§UI hierarchy). -->
+    <div id="ftf-fence-badge">
+      <div class="ftf-card-in">
+        <div class="ftf-badge-cap" data-i18n="hud.fence">Fence</div>
+        <div id="ftf-fence-val">20 m</div>
+        <!-- The perimeter is the one thing that never changes, and the card has
+             to say so without a sentence. A padlock and one word do it. -->
+        <div class="ftf-badge-lock"><span class="ftf-lock-i" aria-hidden="true"></span><span data-i18n="hud.fixed">Fixed</span></div>
+      </div>
+    </div>
+
+    <!-- Changing. The hero number, on the supplied score board. -->
+    <div id="ftf-area-card">
+      <div id="ftf-burst"></div>
+      <div class="ftf-area-in">
+        <div class="ftf-area-row">
+          <span id="ftf-area-val">16</span><span class="ftf-area-unit">m²</span>
+        </div>
+        <div class="ftf-area-cap" data-i18n="hud.grassArea">Grass area</div>
+      </div>
+    </div>
+
+    <!-- The performance meter. It becomes a real graph in the advanced reveal. -->
+    <div id="ftf-curve">
+      <svg viewBox="0 0 240 130" preserveAspectRatio="none" aria-hidden="true">
+        <g id="ftf-curve-axes">
+          <line class="ftf-ax" x1="30" y1="8" x2="30" y2="112"></line>
+          <line class="ftf-ax" x1="30" y1="112" x2="232" y2="112"></line>
+        </g>
+        <path id="ftf-curve-path" d=""></path>
+        <line id="ftf-curve-drop" x1="0" y1="0" x2="0" y2="0"></line>
+        <circle id="ftf-curve-tok" cx="0" cy="0" r="7"></circle>
+      </svg>
+      <div id="ftf-curve-lbl-x" class="ftf-curve-lbl" data-i18n="graph.length">Length</div>
+      <div id="ftf-curve-lbl-y" class="ftf-curve-lbl" data-i18n="graph.area">Area</div>
+      <div id="ftf-curve-peak" data-i18n="graph.peak">L = 8 · W = 8 · A = 64</div>
+    </div>
+
+    <button id="ftf-next" type="button" class="ftf-btn ftf-focus">
+      <span data-i18n="action.next">Next farm</span>
+    </button>
+
+    <!-- ================= SCREEN 1 · TITLE ================= -->
+    <div id="ftf-title" data-screen-label="Title">
+      <div class="ftf-title-top">
+        <!-- The title is artwork; the h1 stays for screen readers and i18n. -->
+        <img id="ftf-logo" src="assets/art/title-logo.png" alt="">
+        <h1 class="ftf-sr" data-i18n="title.name">Fence the Farm</h1>
+      </div>
+      <div class="ftf-title-bottom">
+        <button id="ftf-play" type="button" class="ftf-btn ftf-btn-xl ftf-focus" data-i18n="action.play">Play</button>
+      </div>
+    </div>
+
+    <!-- ================= FINALE =================
+         Five phases, all on the same grass. No overlay, no blank page. -->
+    <div id="ftf-fin" data-screen-label="Finale">
+      <div id="ftf-fin-a-lbl" class="ftf-cmp-lbl"><div class="ftf-cmp-in">
+        <div class="ftf-cmp-tag" data-i18n="final.startBuild">Start build</div>
+        <div class="ftf-cmp-fence"><i id="ftf-fa-dims">13 × 3 m</i></div>
+        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Fence</span> <b id="ftf-fa-per">32 m</b></div>
+        <div class="ftf-cmp-area"><span id="ftf-fa-area">0</span><i>m²</i></div>
+      </div></div>
+      <div id="ftf-fin-b-lbl" class="ftf-cmp-lbl"><div class="ftf-cmp-in">
+        <div class="ftf-cmp-tag" data-i18n="final.bestBuild">Best build</div>
+        <div class="ftf-cmp-fence"><i id="ftf-fb-dims">8 × 8 m</i></div>
+        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Fence</span> <b id="ftf-fb-per">32 m</b></div>
+        <div class="ftf-cmp-area"><span id="ftf-fb-area">0</span><i>m²</i></div>
+      </div></div>
+    </div>
+
+    <!-- The emblem that assembles when the peak is found. -->
+    <div id="ftf-emblem">
+      <div class="ftf-hay">
+        <div class="ftf-hay-in">
+          <div class="ftf-emb-1" data-i18n="final.strategy">Strategy discovered</div>
+          <div class="ftf-emb-2" data-i18n="final.balanced">Balanced sides → most area</div>
+          <div class="ftf-emb-3" data-i18n="final.qualifier">with the same rectangular perimeter</div>
+        </div>
+      </div>
+      <button id="ftf-to-formula" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+    </div>
+
+    <!-- ================= FORMULA, IN THE FIELD ================= -->
+    <!-- The interactive explanation. This replaces the three static panels that
+         used to explain the idea: instead of reading that a fixed perimeter can
+         hold different areas, the student holds the fence at 32 m and moves the
+         shape themselves, and every number and the curve move with their hand.
+         The strategy line is NOT printed here - it appears only if and when they
+         land on the balanced shape on their own. -->
+    <div id="ftf-live" data-screen-label="Live relationship">
+      <div id="ftf-live-hint">Drag the corner. The fence cannot change.</div>
+      <div id="ftf-live-eq">
+        <span id="ftf-live-lw">L + W = 16</span>
+        <span id="ftf-live-a">A = 8 × 8 = 64 m²</span>
+      </div>
+      <div id="ftf-live-why">
+        <span class="ftf-why-eq">P = 2 (L + W)</span>
+        <span class="ftf-why-eq" id="ftf-why-2">32 = 2 (L + W)</span>
+        <span class="ftf-why-eq" id="ftf-why-3">L + W = 16</span>
+      </div>
+      <div id="ftf-live-strategy"><b>Balanced sides</b> give the most area<i>for the same perimeter</i></div>
+      <div id="ftf-live-act">
+        <button id="ftf-live-why" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus">See why</button>
+        <button id="ftf-live-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+      </div>
+    </div>
+
+    <div id="ftf-fm" data-screen-label="Formula">
+      <div id="ftf-fm-per" class="ftf-fm-block">
+        <div class="ftf-fm-cap" data-i18n="formula.outside">Fence around the outside</div>
+        <div class="ftf-fm-eq ftf-fm-eq-p">P = 2 (L + W)</div>
+        <div id="ftf-fm-per-sub" class="ftf-fm-sub">P = 2 (8 + 8)</div>
+        <div id="ftf-fm-per-res" class="ftf-fm-res ftf-fm-res-p">P = 32 m</div>
+      </div>
+      <div id="ftf-fm-area" class="ftf-fm-block">
+        <div class="ftf-fm-cap" data-i18n="formula.inside">Grass inside</div>
+        <div class="ftf-fm-eq ftf-fm-eq-a">A = L × W</div>
+        <div id="ftf-fm-area-sub" class="ftf-fm-sub">A = 8 × 8</div>
+        <div id="ftf-fm-area-res" class="ftf-fm-res ftf-fm-res-a">A = 64 m²</div>
+      </div>
+      <div id="ftf-fm-core">
+        <span class="ftf-core-1" data-i18n="formula.fixedP">Fixed perimeter</span>
+        <span class="ftf-core-2" data-i18n="formula.doesNot">does not mean</span>
+        <span class="ftf-core-3" data-i18n="formula.fixedA">Fixed area</span>
+      </div>
+      <div id="ftf-fm-act">
+        <button id="ftf-see-why" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.seeWhy">See why</button>
+        <button id="ftf-to-complete" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+      </div>
+    </div>
+
+    <!-- ================= ADVANCED ALGEBRA ================= -->
+    <div id="ftf-adv" data-screen-label="Advanced">
+      <div class="ftf-hay ftf-adv-card">
+        <div class="ftf-hay-in ftf-adv-in">
+          <!-- The derivation, not just its result. A Grade 8-10 student can
+               reasonably ask "why 16 when the fence is 32?", so the halving is
+               shown happening instead of being asserted. -->
+          <div id="ftf-adv-0" class="ftf-adv-row">
+            <span class="ftf-adv-eq">P = 2L + 2W</span>
+            <span class="ftf-adv-note" data-i18n="adv.per">fence around the outside</span>
+          </div>
+          <div id="ftf-adv-0b" class="ftf-adv-row">
+            <span class="ftf-adv-eq">32 = 2L + 2W</span>
+            <span class="ftf-adv-note" data-i18n="adv.sub32">your fence</span>
+          </div>
+          <div id="ftf-adv-1" class="ftf-adv-row">
+            <span class="ftf-adv-eq">L + W = 16</span>
+            <span class="ftf-adv-note" data-i18n="adv.half">divide both sides by 2</span>
+          </div>
+          <div id="ftf-adv-2" class="ftf-adv-row">
+            <span class="ftf-adv-eq">W = 16 − L</span>
+            <span id="ftf-adv-sub" class="ftf-adv-note">L = 8 → W = 8</span>
+          </div>
+          <div id="ftf-adv-3" class="ftf-adv-row">
+            <span class="ftf-adv-eq ftf-adv-eq-a">A = L (16 − L)</span>
+          </div>
+          <div id="ftf-adv-4" class="ftf-adv-row ftf-adv-last">
+            <div data-i18n="adv.reveal">The path you dragged was this curve.</div>
+            <button id="ftf-adv-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= COMPLETION ================= -->
+    <div id="ftf-complete" data-screen-label="Complete">
+      <div id="ftf-badge" class="ftf-sign">
+          <span class="ftf-sign-m">
+          <span class="ftf-done-title" data-i18n="complete.title">Master builder</span>
+          <span class="ftf-done-sub" data-i18n="complete.sub">Same fence. Smarter shape.</span>
+        </span>
+        </div>
+      <div id="ftf-complete-foot">
+        <div class="ftf-done-count" data-i18n="complete.count">4 farms completed</div>
+        <div class="ftf-done-btns">
+          <button id="ftf-replay" type="button" class="ftf-btn ftf-btn-lg ftf-focus" data-i18n="action.playAgain">Play again</button>
+          <button id="ftf-explore-btn" type="button" class="ftf-btn ftf-btn-wood ftf-btn-lg ftf-focus" data-i18n="action.explore">Explore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= EXPLORE (sandbox) ================= -->
+    <div id="ftf-explore" data-screen-label="Explore">
+      <div id="ftf-explore-bar">
+        <span class="ftf-explore-cap" data-i18n="explore.pick">Pick a fence</span>
+        <div id="ftf-explore-chips"></div>
+      </div>
+      <button id="ftf-explore-exit" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.done">Done</button>
+    </div>
+
+    <div id="ftf-loader">Loading</div>
+
+    <!-- ================= DEBUG · never built in production ================= -->
+    <div id="ftf-debug">
+      <div class="ftf-dbg-head"><span>Debug navigator</span><span class="ftf-dbg-key">press D</span></div>
+      <pre id="ftf-debug-stats">-</pre>
+      <div class="ftf-dbg-cap">States</div>
+      <div id="ftf-debug-screens" class="ftf-dbg-row"></div>
+      <div class="ftf-dbg-cap">Toggles</div>
+      <div id="ftf-debug-toggles" class="ftf-dbg-row"></div>
+    </div>
+    <div id="ftf-dimdebug">-</div>
+
+    <!-- String source for keys with no permanent home in the markup. -->
+    <div id="ftf-strings">
+      <span data-i18n="tut.reason">Give her more grass</span>
+      <span data-i18n="tut.touch">Drag this corner</span>
+      <span data-i18n="tut.noticed">More grass — still 20 m</span>
+      <span data-i18n="tut.more">Can you give her even more?</span>
+      <span data-i18n="tut.challenge">Find the biggest area</span>
+      <span data-i18n="tut.success">Biggest grass area!</span>
+      <span data-i18n="tut.gotIt">You&#39;ve got it!</span>
+      <span data-i18n="instruction.record">Beat the record — 32 m²</span>
+      <span data-i18n="instruction.push">Push it further.</span>
+      <!-- Level 3 is framed as an EXPERIMENT, never as advice. "Stretch it
+           longer" reads as a recommendation and would reinforce the very
+           misconception the level exists to dislodge. -->
+      <span data-i18n="instruction.stretch">Test an idea: make the field longer</span>
+      <span data-i18n="instruction.mostGrass">Now find the largest area</span>
+      <span data-i18n="feedback.longerLess">Longer field. Less area.</span>
+      <span data-i18n="feedback.tryMore">Better. Can you do more?</span>
+      <span data-i18n="record.new">New record — 33 m²</span>
+      <span data-i18n="record.match">Record matched — 32 m²</span>
+      <span data-i18n="hud.fixed">Fixed</span>
+      <!-- The tutorial check. Two answers, one question, no worksheet. -->
+      <span data-i18n="ask.same">What stayed the same?</span>
+      <span data-i18n="ask.fence">Fence length</span>
+      <span data-i18n="ask.area">Area</span>
+      <span data-i18n="ask.sameRight">Exactly — only the shape changed.</span>
+      <span data-i18n="ask.sameWrong">Look at the locked value.</span>
+      <!-- The Level 3 prediction. A hypothesis, so it is never marked. -->
+      <span data-i18n="ask.predict">What will happen to the area?</span>
+      <span data-i18n="ask.up">Increase</span>
+      <span data-i18n="ask.same2">Stay the same</span>
+      <span data-i18n="ask.down">Decrease</span>
+      <span data-i18n="ask.logged">Let us test it.</span>
+      <span data-i18n="predict.right">Your prediction matched the result.</span>
+      <span data-i18n="predict.wrong">Your experiment gave you the evidence.</span>
+      <span data-i18n="success.r2">Record smashed!</span>
+      <span data-i18n="success.r3">Longer wasn't more grass.</span>
+      <span data-i18n="success.r4">Master build.</span>
+      <span data-i18n="bonus.make">Make exactly 48 m²</span>
+      <span data-i18n="bonus.done">Exactly 48 m². Same fence.</span>
+      <span data-i18n="action.reveal">See the proof</span>
+      <span data-i18n="final.longest">Your longest</span>
+      <span data-i18n="a11y.area">Grass area</span>
+      <span data-i18n="a11y.sqm">square metres</span>
+    </div>
+
+    <div id="ftf-a11y" aria-live="polite"></div>
+  </div>
+</div>
+
+  <script src="js/game.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/goat.js"></script>
+  <script src="js/instruct.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/finale.js"></script>
+  <!-- After levels.js and finale.js: cheer.js WRAPS levelSucceed and
+       levelReset, so those have to exist by the time it runs. -->
+  <script src="js/mascot.js"></script>
+  <script src="js/cheer.js"></script>
+  <!-- Also after levels.js and finale.js: explain.js wraps ownsMain,
+       dragAllowed and levelStep, so those must already exist. -->
+  <script src="js/explain.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/debug.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
