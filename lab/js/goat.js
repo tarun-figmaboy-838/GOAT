@@ -679,6 +679,13 @@ class GoatController {
     const g = this.game, G = this.G, C = GOAT_CONFIG;
     G.st += dt;
 
+    /* The journey between farms scripts her completely - legs moving, feet
+       still, facing east. Left to herself she timed the walk out and dropped
+       into a graze halfway across, so the ground went on sliding under a goat
+       who had stopped to eat. Her frames still advance; only her decisions are
+       suspended. */
+    if (this.travelling) return;
+
     // Watch the handle rather than patching the drag handlers: one place to
     // notice the student has taken hold, and it cannot get out of step.
     const dragging = !!g.stats.dragging;

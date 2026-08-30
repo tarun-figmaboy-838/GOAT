@@ -146,9 +146,20 @@ class InstructionController {
   }
 
   /* --------------------------------------------------------------- idle ---- */
+  /* --------------------------------------------------------------- idle ----
+     Idle help is only ever offered while the farm is still ASKING for
+     something. dragAllowed() was the only test, and it is true in two places
+     where nothing is outstanding: on the live explanation screen, where the
+     handle works on purpose and the player is reading and experimenting; and
+     after a farm has been won, where the shape is solved, the side lengths are
+     revealed and the next button is waiting. In both the finger went on
+     tapping the corner every five seconds, which reads as nagging. */
+  idleAllowed() {
+    return this.g.stats.phase === 'play' && !this.g.stats.completed;
+  }
   armIdle() {
     this.clear();
-    if (!this.idleOn) return;
+    if (!this.idleOn || !this.idleAllowed()) return;
     this.at(INSTRUCT.idleMs, () => this.showHand());
     this.at(INSTRUCT.goatMs, () => {
       if (this.g.stats.dragging) return;
@@ -169,7 +180,7 @@ class InstructionController {
 
   /* ---------------------------------------------------------- the hand ---- */
   showHand() {
-    if (this.g.stats.dragging || !this.g.dragAllowed()) return;
+    if (this.g.stats.dragging || !this.idleAllowed() || !this.g.dragAllowed()) return;
     /* Never two hands. The tutorial's own large hand is the teacher during the
        beat that explains the control; this small one is for the idle moments
        afterwards. If that one is up, this one stays away - two hands pointing

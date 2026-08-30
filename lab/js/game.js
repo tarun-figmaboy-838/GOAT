@@ -1016,6 +1016,9 @@ class FenceTheFarm {
     this.el.ring.style.opacity = '0';
     this.el.hand.style.animation = 'none';
     this.el.hand.style.opacity = '0';
+    // There are two hands - the tutorial's and the idle one - and this is the
+    // single "training wheels off" call, so it puts both away.
+    if (this._instr) this._instr.hideHand(true);
     this.el.skip.classList.remove('ftf-in');
     if (!this.stats.dragging) this.el.guide.style.opacity = '0';
   }
@@ -1330,7 +1333,11 @@ class FenceTheFarm {
      journey is skipped and the next farm simply starts, exactly as before. */
   travelTo(ri) {
     if (this.noMotion()) { this.startRound(ri); return; }
-    const D = 780, W = 1280;
+    /* A full screen of ground in 780ms was a whip-pan, not a walk, and it left
+       the signpost only about 380ms fully settled - not long enough to read
+       "Farm 2 of 4 / Farm Record" before the next fence started rising under
+       it. The walk is now 1150ms and the sign holds for a whole second. */
+    const D = 1150, W = 1280;
     const A = this.el.grass, B = this.el['grass-2'];
     this.stats.phase = 'travel';
     this.el.fill.style.transition = 'none';
@@ -1348,7 +1355,7 @@ class FenceTheFarm {
     [A, B].forEach(el => { el.style.transition = 'none'; el.style.transform = 'translateX(0)'; });
     void A.offsetWidth;
     [A, B].forEach(el => {
-      el.style.transition = 'transform ' + D + 'ms cubic-bezier(.36,0,.28,1)';
+      el.style.transition = 'transform ' + D + 'ms cubic-bezier(.5,0,.2,1)';
       el.style.transform = 'translateX(' + (-W) + 'px)';
     });
 
@@ -1385,8 +1392,8 @@ class FenceTheFarm {
     t.classList.add('ftf-in');
     /* startRound clears the game's timers halfway through this, so the two
        that have to outlive it are the keeping kind. */
-    this.afterKeep(280, () => this.sfx('sign_swing'));
-    this.afterKeep(1620, () => t.classList.remove('ftf-in'));
+    this.afterKeep(300, () => this.sfx('sign_swing'));
+    this.afterKeep(2260, () => t.classList.remove('ftf-in'));
   }
 
   /* Seven steps across the journey, alternating weight so it reads as an

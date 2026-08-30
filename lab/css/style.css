@@ -454,7 +454,7 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   transform: translateX(-50%); transform-origin: 50% -260px;
   pointer-events: none; opacity: 0;
 }
-#ftf-travel.ftf-in { animation: ftf-travel-swing 1560ms cubic-bezier(.3,.7,.3,1) forwards; }
+#ftf-travel.ftf-in { animation: ftf-travel-swing 2200ms cubic-bezier(.3,.7,.3,1) forwards; }
 #ftf-travel-board {
   position: relative; min-width: 392px; padding: 15px 46px 17px; text-align: center;
   border-radius: 22px; border: 5px solid var(--wood-edge);
@@ -494,14 +494,18 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 }
 /* In, hold, out - one animation, so the sign can never be left on screen by a
    timer that did not fire. It ends invisible whatever happens. */
+/* Over 2200ms: down and settled by 38% (840ms), then held perfectly still
+   until 82% (1800ms), then away. That hold is the point - a signpost the
+   player cannot finish reading is just a flicker, and 380ms of it was what
+   made the whole journey feel rushed. */
 @keyframes ftf-travel-swing {
    0%  { opacity: 0; transform: translateX(-50%) translateY(-330px) rotate(-4deg); }
-  12%  { opacity: 1; }
-  26%  { transform: translateX(-50%) translateY(12px) rotate(2.2deg); }
-  37%  { transform: translateX(-50%) translateY(-6px) rotate(-1.3deg); }
-  46%  { transform: translateX(-50%) translateY(3px) rotate(.6deg); }
-  54%  { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
-  78%  { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
+   8%  { opacity: 1; }
+  18%  { transform: translateX(-50%) translateY(12px) rotate(2.2deg); }
+  26%  { transform: translateX(-50%) translateY(-6px) rotate(-1.3deg); }
+  32%  { transform: translateX(-50%) translateY(3px) rotate(.6deg); }
+  38%  { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
+  82%  { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
  100%  { opacity: 0; transform: translateX(-50%) translateY(-330px) rotate(3deg); }
 }
 /* Reduced motion skips the journey entirely, so the sign never runs. */
@@ -973,10 +977,15 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   color: var(--cream); text-shadow: 0 2px 0 rgba(40, 70, 20, .8);
 }
 #ftf-curve-lbl-x { left: 50%; bottom: -22px; transform: translateX(-50%); }
-/* On the live screen the arithmetic sits directly under the card, so the axis
-   label goes inside it rather than into the pill beneath. There is empty card
-   below the axis line either way. */
-#ftf-curve.ftf-live-pos #ftf-curve-lbl-x { bottom: 14px; }
+/* Both axis labels belong INSIDE the card. They were placed for the small
+   meter, which has no card to speak of, and inherited those offsets when the
+   meter grew into a graph: LENGTH dropped through the bottom edge into the
+   arithmetic beneath it, and AREA sat out on the grass past the left edge,
+   clear of the rounded corner. The label is rotated about its own top-left, so
+   its band runs LEFTWARD from `left` by its own line height - which is why a
+   negative left put it outside altogether. */
+#ftf-curve.ftf-graph #ftf-curve-lbl-x { bottom: 14px; }
+#ftf-curve.ftf-graph #ftf-curve-lbl-y { left: 30px; }
 #ftf-curve-lbl-y { left: -10px; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: 0 0; }
 #ftf-curve-peak {
   position: absolute; left: 50%; top: -30px; transform: translateX(-50%); opacity: 0;
@@ -1033,8 +1042,32 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 .ftf-btn-xl { box-shadow: 0 7px 0 #B32C02, 0 15px 26px rgba(60, 20, 0, .38); }
 .ftf-btn-xl:hover { box-shadow: 0 9px 0 #B32C02, 0 18px 30px rgba(60, 20, 0, .4), 0 0 30px rgba(255, 168, 20, .6); }
 .ftf-btn-xl:active { box-shadow: 0 2px 0 #B32C02, 0 5px 10px rgba(60, 20, 0, .34); }
-.ftf-focus:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
-#ftf-handle.ftf-focus:focus-visible { box-shadow: 0 0 0 4px var(--focus); }
+/* The focus ring used to REPLACE the element's box-shadow. On a button that
+   meant losing the hard bottom edge that gives it its depth and gaining a flat
+   ring in its place, so a focused button stopped looking like the same button -
+   it went flat and changed colour. The ring is now ADDED to whatever shadow the
+   element already carries, and it is drawn in the game's own palette: a dark
+   wood line with a cream halo, which reads against grass, wood and paper alike
+   and is far higher contrast than the old cyan on an orange button. */
+.ftf-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--wood-deep), 0 0 0 6px var(--cream);
+}
+.ftf-btn.ftf-focus:focus-visible {
+  box-shadow: inset 0 -5px 9px rgba(176, 44, 2, .4), 0 5px 0 #A82702, 0 11px 18px rgba(60, 20, 0, .36),
+              0 0 0 3px var(--wood-deep), 0 0 0 6px var(--cream);
+}
+.ftf-btn-wood.ftf-focus:focus-visible {
+  box-shadow: 0 5px 0 #6B3208, 0 11px 18px rgba(50, 22, 0, .3),
+              0 0 0 3px var(--wood-deep), 0 0 0 6px var(--cream);
+}
+.ftf-btn-xl.ftf-focus:focus-visible {
+  box-shadow: 0 7px 0 #B32C02, 0 15px 26px rgba(60, 20, 0, .38),
+              0 0 0 3px var(--wood-deep), 0 0 0 6px var(--cream);
+}
+#ftf-handle.ftf-focus:focus-visible {
+  box-shadow: 0 0 0 3px var(--wood-deep), 0 0 0 6px var(--cream);
+}
 
 #ftf-next {
   position: absolute; right: 26px; top: 620px; width: 224px; height: 62px;
