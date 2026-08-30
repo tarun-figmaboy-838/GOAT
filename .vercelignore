@@ -26,10 +26,10 @@
 # Loose source art at the repo root.
 assets/
 
-# Test harnesses, never deployed.
-**/__shot.js
-**/__shot.html
-**/__p.js
-**/__p.html
+# Test harnesses, never deployed. Named ones were listed one by one, which meant
+# every new probe had to remember to add itself - and __qa-main.js was already
+# sitting in the bundle because nobody had. Anything with the double-underscore
+# prefix is a harness by convention, so the prefix is what is matched.
+**/__*
 
 .git/

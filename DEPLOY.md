@@ -4,17 +4,26 @@ Static site, no build step. Vercel serves the repo root.
 
 ```
 /
-  index.html          launcher: Play / Lab
-  game/               THE game — you edit this, and this is what deploys
-  lab/                a duplicate to experiment in
+  index.html          launcher: Play / Earlier build
+  lab/                THE game — this is what "Play" opens and what people see
+  game/               the earlier side-view build, kept for reference
   vercel.json         cleanUrls + cache headers
   .vercelignore       keeps ~7 MB of source art out of the bundle
   scripts/
-    reset-lab.ps1     throw away /lab and copy /game over it
+    reset-lab.ps1     throw away /lab and copy /game over it — see the warning
 ```
 
-One source of truth: `game/` is both the working tree and the deployed folder.
-There is no publish step.
+**The two folders have swapped roles.** `game/` was the working tree; the
+top-down rebuild — the goat mascot, the journey between farms, the live
+parabola screen — was all built in `lab/`, and `game/` was deliberately frozen
+at the earlier side-view version. Rather than overwrite it, the launcher's
+primary card was pointed at `lab/`, so what visitors get is the current build
+and the old one stays reachable and unmodified.
+
+So: **edit `lab/`.** There is still no publish step.
+
+> `scripts/reset-lab.ps1` copies `game/` over `lab/` and predates the swap.
+> Running it now would replace the current game with the old one. Do not.
 
 ## Deploy
 
@@ -24,8 +33,16 @@ vercel --prod     # production
 ```
 
 No project settings needed — no framework, no build command, no output
-directory. Vercel serves the root, so `/` is the launcher, `/game` is the game
-and `/lab` is the duplicate.
+directory. Vercel serves the root, so `/` is the launcher, `/lab` is the game
+and `/game` is the earlier build.
+
+### Or just connect the repo
+
+The repo is `tarun-figmaboy-838/GOAT`. In the Vercel dashboard, **Add New →
+Project → import that repo**, leave every setting on its default (Framework
+preset *Other*, no build command, no output directory) and deploy. Every push
+to `main` then deploys itself, and pull requests get preview URLs. This needs
+no CLI and no Node installed.
 
 ## The lab
 
