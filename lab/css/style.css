@@ -37,11 +37,15 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   box-shadow: 0 0 90px 60px rgba(38, 66, 16, .5);
 }
 /* Large clean cartoon grass. Nothing else in the world (§background rule). */
-#ftf-grass { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.ftf-ground { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+/* The travelling sheet waits one full screen to the right and is shown only
+   while the journey is running - it must never be part of an ordinary frame. */
+#ftf-grass-2 { left: 100%; display: none; }
+#ftf-stage.ftf-travelling #ftf-grass-2 { display: block; }
 /* Time of day. Levels differ by light, never by clutter (§level variation).
    The grass itself is graded, and a directional wash sits over it, so the
    change reads at a glance without touching the playable geometry. */
-#ftf-grass { transition: filter 900ms ease; }
+.ftf-ground { transition: filter 900ms ease; }
 #ftf-light {
   position: absolute; inset: 0; pointer-events: none; opacity: 0;
   transition: opacity 900ms ease;
@@ -51,10 +55,10 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(128% 100% at 50% 40%, rgba(0, 0, 0, 0) 55%, rgba(24, 52, 12, .22) 100%);
 }
-#ftf-stage[data-light="morning"] #ftf-grass { filter: saturate(.95) brightness(1.05) hue-rotate(-4deg); }
-#ftf-stage[data-light="midday"]  #ftf-grass { filter: saturate(1.02) brightness(1.02); }
-#ftf-stage[data-light="evening"] #ftf-grass { filter: saturate(1.06) brightness(.97) sepia(.07) hue-rotate(-5deg); }
-#ftf-stage[data-light="golden"]  #ftf-grass { filter: saturate(1.1) brightness(.96) sepia(.12) hue-rotate(-8deg); }
+#ftf-stage[data-light="morning"] .ftf-ground { filter: saturate(.95) brightness(1.05) hue-rotate(-4deg); }
+#ftf-stage[data-light="midday"]  .ftf-ground { filter: saturate(1.02) brightness(1.02); }
+#ftf-stage[data-light="evening"] .ftf-ground { filter: saturate(1.06) brightness(.97) sepia(.07) hue-rotate(-5deg); }
+#ftf-stage[data-light="golden"]  .ftf-ground { filter: saturate(1.1) brightness(.96) sepia(.12) hue-rotate(-8deg); }
 #ftf-stage[data-light="morning"] #ftf-light { opacity: .26; background: linear-gradient(165deg, rgba(206, 232, 255, 1) 0%, rgba(250, 252, 240, 1) 70%); }
 #ftf-stage[data-light="midday"]  #ftf-light { opacity: .12; background: linear-gradient(180deg, rgba(255, 255, 250, 1) 0%, rgba(244, 250, 235, 1) 100%); }
 #ftf-stage[data-light="evening"] #ftf-light { opacity: .24; background: linear-gradient(205deg, rgba(255, 226, 178, 1) 0%, rgba(232, 174, 122, 1) 100%); }
@@ -196,9 +200,17 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 #ftf-handle {
   position: absolute; left: 0; top: 0; width: 104px; height: 124px;
   margin: -62px 0 0 -52px; padding: 0; border: 0; border-radius: 24px;
-  background: transparent; cursor: grab; pointer-events: auto;
+  /* Inert by default. The handle is a 104x124 box that stays in the DOM at
+     opacity 0 between phases, and while it kept pointer-events it went on
+     claiming the cursor - so the pointer turned into a grab hand over empty
+     grass on the title, the recap and the completion screen. It only becomes
+     interactive when it is actually visible and draggable. */
+  background: transparent; cursor: default; pointer-events: none;
   touch-action: none; z-index: 900; outline: none;
 }
+/* Live: visible, draggable, and the only time it owns the cursor. */
+#ftf-handle.ftf-live { pointer-events: auto; cursor: grab; }
+#ftf-handle.ftf-live.ftf-held { cursor: grabbing; }
 #ftf-glow, #ftf-ring {
   position: absolute; left: 50%; top: 50%; width: 74px; height: 74px;
   margin: -37px 0 0 -37px; border-radius: 50%; pointer-events: none;
@@ -260,7 +272,7 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 #ftf-live > * { pointer-events: auto; }
 
 #ftf-live-hint {
-  position: absolute; left: 0; right: 0; top: 26px; text-align: center;
+  position: absolute; left: 300px; right: 300px; top: 26px; text-align: center;
   font: 700 21px 'Nunito', sans-serif; color: var(--cream);
   text-shadow: 0 2px 0 var(--ink), 0 3px 12px rgba(0, 0, 0, .45);
   pointer-events: none;
@@ -268,7 +280,7 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 /* The live arithmetic. Sits under the curve, changes on every drag, and is the
    only number-work on the screen. */
 #ftf-live-eq {
-  position: absolute; right: 40px; top: 486px; width: 560px;
+  position: absolute; right: 40px; top: 462px; width: 560px;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   pointer-events: none;
 }
@@ -284,7 +296,7 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 }
 /* The derivation is opt-in and appears in place, not on another screen. */
 #ftf-live-why {
-  position: absolute; right: 40px; top: 596px; width: 560px;
+  position: absolute; right: 40px; top: 592px; width: 560px;
   display: flex; justify-content: center; gap: 10px; opacity: 0;
   transition: opacity 380ms ease; pointer-events: none;
 }
@@ -295,8 +307,10 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 #ftf-live-why.ftf-in { opacity: 1; }
 
 /* Held back until they find the balanced shape themselves. */
+/* Low in the left half, clear of the pasture's deepest reach. It shares this
+   half with nothing else now that the side-length cards are gone. */
 #ftf-live-strategy {
-  position: absolute; left: 40px; bottom: 116px; width: 540px; text-align: center;
+  position: absolute; left: 40px; bottom: 44px; width: 560px; text-align: center;
   opacity: 0; transform: translateY(8px);
   transition: opacity 420ms ease, transform 420ms cubic-bezier(.34,1.4,.64,1);
   font: 700 25px 'Nunito', sans-serif; color: var(--cream);
@@ -427,6 +441,74 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 #ftf-stage.ftf-still #ftf-flit * { animation: none !important; }
 #ftf-stage.ftf-still #ftf-flit { display: none; }
 
+/* ---------------------------------------------- the journey between farms --
+   The old fence sinks, the ground scrolls past under a trotting goat, and this
+   swings down on its ropes. It is the only place the farms are ever named and
+   the only place the player is told how far through the four they are - both
+   of which used to be spent on a second of empty grass.
+
+   The ropes are drawn as part of the board so there is one element to animate:
+   a sign that swings has to swing as one piece or it reads as two. */
+#ftf-travel {
+  position: absolute; left: 50%; top: 28px; z-index: 1350;
+  transform: translateX(-50%); transform-origin: 50% -260px;
+  pointer-events: none; opacity: 0;
+}
+#ftf-travel.ftf-in { animation: ftf-travel-swing 1560ms cubic-bezier(.3,.7,.3,1) forwards; }
+#ftf-travel-board {
+  position: relative; min-width: 392px; padding: 15px 46px 17px; text-align: center;
+  border-radius: 22px; border: 5px solid var(--wood-edge);
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  box-shadow: 0 8px 0 var(--wood-deep), 0 18px 30px rgba(24, 52, 12, .42);
+}
+/* Two ropes running up off the top of the screen, drawn behind the board. */
+#ftf-travel-board::before, #ftf-travel-board::after {
+  content: ''; position: absolute; top: -300px; width: 6px; height: 316px; z-index: -1;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(140, 110, 60, 0) 0%, #8C6E3C 26%, #6F5326 100%);
+}
+#ftf-travel-board::before { left: 40px; }
+#ftf-travel-board::after  { right: 40px; }
+#ftf-travel-cap {
+  font: 700 15px 'Nunito Sans', sans-serif; letter-spacing: 2.6px;
+  text-transform: uppercase; color: var(--cap);
+}
+#ftf-travel-name {
+  font: 800 41px 'Nunito', sans-serif; color: var(--ink); line-height: 1.04; margin-top: 1px;
+}
+/* One marker per farm: filled for the ones behind her, green for the one she
+   is walking into, empty for the ones still ahead. */
+#ftf-travel-dots { display: flex; justify-content: center; gap: 11px; margin-top: 11px; }
+#ftf-travel-dots i {
+  width: 36px; height: 11px; border-radius: 999px;
+  background: rgba(84, 53, 24, .20);
+  box-shadow: inset 0 2px 2px rgba(69, 42, 18, .22);
+}
+#ftf-travel-dots i.ftf-done {
+  background: linear-gradient(180deg, var(--gold) 0%, var(--gold-deep) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+#ftf-travel-dots i.ftf-now {
+  background: linear-gradient(180deg, var(--green-hi) 0%, var(--green-lo) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+/* In, hold, out - one animation, so the sign can never be left on screen by a
+   timer that did not fire. It ends invisible whatever happens. */
+@keyframes ftf-travel-swing {
+   0%  { opacity: 0; transform: translateX(-50%) translateY(-330px) rotate(-4deg); }
+  12%  { opacity: 1; }
+  26%  { transform: translateX(-50%) translateY(12px) rotate(2.2deg); }
+  37%  { transform: translateX(-50%) translateY(-6px) rotate(-1.3deg); }
+  46%  { transform: translateX(-50%) translateY(3px) rotate(.6deg); }
+  54%  { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
+  78%  { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
+ 100%  { opacity: 0; transform: translateX(-50%) translateY(-330px) rotate(3deg); }
+}
+/* Reduced motion skips the journey entirely, so the sign never runs. */
+@media (prefers-reduced-motion: reduce) {
+  #ftf-travel.ftf-in { animation: none; opacity: 0; }
+}
+
 /* ------------------------------------------------- level celebration ----
    Wordless. The farm is pushed out of focus and dimmed a little, she lands in
    front of it, and the effects sit BEHIND her so nothing ever crosses her
@@ -484,9 +566,11 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 /* A four-point star, not a dot: at celebration distance a plain dot reads as
    noise. Bigger core, harder glow - it has to carry against bright grass. */
 .ftf-p-spark {
-  background: radial-gradient(circle, #FFFFFF 0%, #FFF0B8 45%, rgba(255, 214, 92, 0) 72%);
+  /* The glow is in the gradient, not in a box-shadow: a box-shadow on a
+     clip-path'd element is painted and then clipped away by that same star, so
+     it cost a paint pass and showed nothing. */
+  background: radial-gradient(circle, #FFFFFF 0%, #FFFBE4 34%, #FFE08A 56%, rgba(255, 203, 74, 0) 80%);
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 18px 7px rgba(255, 203, 74, .9);
   clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
 }
 /* Bigger than she is, so it reads as a shockwave passing OUT of her rather
@@ -521,6 +605,34 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
    back on its own. */
 #ftf-field { transition: filter 380ms ease; }
 #ftf-field.ftf-defocus { filter: blur(7px) saturate(.92) brightness(.88); }
+/* A blurred field is a BACKDROP, not a scene, and it has to be treated as one.
+   Profiling the celebration found 56 nested filters under this blur - 39 of
+   them fence-module drop-shadows - and one looping dashed guide still
+   animating. That combination is the reason the goat stuttered: the guide
+   dirtied the subtree every frame, so every frame the browser re-ran 56 filter
+   passes and then re-blurred the whole stage, for detail a 7px blur erases
+   anyway. Frozen and flattened, the blur is rasterised ONCE and cached for the
+   whole eight seconds, and the compositor is free to spend its budget on her.
+
+   contain is what promises the browser the subtree cannot change, which is
+   what lets it keep that cached texture. */
+#ftf-field.ftf-defocus {
+  contain: paint;
+  will-change: filter;
+}
+#ftf-field.ftf-defocus * {
+  filter: none !important;
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+/* Play affordances have no business in a celebration, and under the blur they
+   were only ever cost. The snap guide is the one that was animating. */
+#ftf-field.ftf-defocus #ftf-guide,
+#ftf-field.ftf-defocus #ftf-grid,
+#ftf-field.ftf-defocus #ftf-glow,
+#ftf-field.ftf-defocus #ftf-ring,
+#ftf-field.ftf-defocus #ftf-trace,
+#ftf-field.ftf-defocus #ftf-ghost { opacity: 0 !important; }
 
 /* Only the goat. Blurring the field was not enough on its own: the sign, the
    two cards, the question and the buttons all live OUTSIDE the field, so they
@@ -861,6 +973,10 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   color: var(--cream); text-shadow: 0 2px 0 rgba(40, 70, 20, .8);
 }
 #ftf-curve-lbl-x { left: 50%; bottom: -22px; transform: translateX(-50%); }
+/* On the live screen the arithmetic sits directly under the card, so the axis
+   label goes inside it rather than into the pill beneath. There is empty card
+   below the axis line either way. */
+#ftf-curve.ftf-live-pos #ftf-curve-lbl-x { bottom: 14px; }
 #ftf-curve-lbl-y { left: -10px; top: 50%; transform: rotate(-90deg) translateX(-50%); transform-origin: 0 0; }
 #ftf-curve-peak {
   position: absolute; left: 50%; top: -30px; transform: translateX(-50%); opacity: 0;
@@ -870,6 +986,10 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   box-shadow: 0 3px 0 var(--gold-deep), 0 8px 16px rgba(0, 0, 0, .3);
 }
 #ftf-curve.ftf-graph { right: 40px; top: 150px; width: 590px; height: 400px; background: rgba(38, 24, 8, .42); }
+/* On the live screen the same card shares the column with the arithmetic and
+   the derivation, so it is measured from the buttons upward and stops short of
+   them. The finale's graph, which has the column to itself, keeps its 400. */
+#ftf-curve.ftf-graph.ftf-live-pos { width: 540px; height: 292px; }
 #ftf-curve.ftf-graph #ftf-curve-axes, #ftf-curve.ftf-graph .ftf-curve-lbl { opacity: 1; }
 #ftf-curve.ftf-graph #ftf-curve-path { stroke: var(--gold); stroke-width: 4; }
 #ftf-curve.ftf-graph #ftf-curve-drop { opacity: 1; }

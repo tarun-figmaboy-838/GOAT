@@ -85,15 +85,18 @@ Object.assign(FenceTheFarm.prototype, {
       this.el.live.classList.add('ftf-on');
 
       this.buildFence(560, () => {
-        this.el.handle.style.opacity = '1';
-        this.el.handle.style.cursor = 'grab';
+        this.showHandle(true);
         this.pulseOnly('handle');
         this.moveGoatInside(true);
         this.setGoat('eat');
         this.render();
         this.explainStep();
       });
-      this.showDims(true);
+      /* No floating side-length cards on this screen. The live pill already
+         reads "A = 7 x 9 = 63 m²", which states both sides - so the cards were
+         duplicate information, and on a deep pen the W card landed on the
+         graph while the L card collided with the strategy line. */
+      this.showDims(false);
       this.explainStep();
     });
 
@@ -111,14 +114,17 @@ Object.assign(FenceTheFarm.prototype, {
     this.el['why-2'].textContent = g.perimeter + ' = 2 (L + W)';
     this.el['why-3'].textContent = 'L + W = ' + g.half;
     this.advCurve();
-    this.placeDims();
+    /* The peak label names the peak, so it belongs to the peak: it used to be
+       written once and left up, which meant the screen claimed "A = 64" while
+       the player was standing on 15 x 1. */
+    this.el['curve-peak'].style.opacity = (g.L === g.W) ? '1' : '0';
 
     /* The peak. Only once, and only after a move of their own - the first call
        is the screen drawing itself, and that must never count as a discovery. */
     if (g.L === g.W && !this._liveFound && this._liveMoves > 0) {
       this._liveFound = true;
       this.el['live-strategy'].classList.add('ftf-in');
-      this.el['curve-peak'].textContent = 'L = ' + g.L + ' · W = ' + g.W + ' · A = ' + area;
+      this.el['curve-peak'].textContent = g.L + ' × ' + g.W + ' = ' + area + ' m² — the most from ' + g.perimeter + ' m';
       this.el['curve-peak'].style.opacity = '1';
       this.sfx('success_chord');
       this.setGoat('happy');
@@ -144,5 +150,23 @@ Object.assign(FenceTheFarm.prototype, {
   proto.levelStep = function (prevArea, area, dir, isBest) {
     if (this.stats.phase === 'explain') { this.explainStep(); return; }
     step.call(this, prevArea, area, dir, isBest);
+  };
+  /* Nor is LETTING GO of the handle. levelStep was guarded but evaluateRelease
+     was not, so releasing on the balanced shape ran the farm's entire success
+     path straight over the top of the explanation: the plank came back saying
+     "Master build." across the live hint, succeed() threw the side-length cards
+     and their measurement lines back onto grass this screen deliberately keeps
+     clear, and "See the proof" was offered beside the screen's own two buttons.
+
+     Landing on the square here is a discovery, not a win - there is nothing to
+     complete on this screen - and explainStep is what marks it. */
+  const rel = proto.evaluateRelease, relLv = proto.levelRelease;
+  proto.evaluateRelease = function () {
+    if (this.stats.phase === 'explain') { this.explainStep(); return; }
+    rel.call(this);
+  };
+  proto.levelRelease = function () {
+    if (this.stats.phase === 'explain') return;
+    relLv.call(this);
   };
 })(FenceTheFarm.prototype);

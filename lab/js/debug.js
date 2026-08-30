@@ -115,7 +115,7 @@ Object.assign(FenceTheFarm.prototype, {
     this.el['area-card'].style.opacity = '1';
     this.el['fence-val'].textContent = r.perimeter + ' m';
     this.el['area-val'].textContent = String(r.optimum[0] * r.optimum[1]);
-    this.el.handle.style.opacity = '0';
+    this.showHandle(false);
     this.render({ instant: true });
     this.moveGoatInside(true);
     this.setGoat('eat');
@@ -184,7 +184,7 @@ Object.assign(FenceTheFarm.prototype, {
       '\ngoatState  ' + this.goat.state +
       '\ntutBeat    ' + (lv.tutBeat || '-') +
       '\nstretched  ' + (lv.stretched ? 'yes' : 'no') + '  flipped ' + (lv.flipped ? 'yes' : 'no') +
-      '\nbonus      ' + (lv.bonusOpen ? (lv.bonusDone ? 'done' : 'open') : '-') +
+      '\nprecise    ' + (lv.precise ? 'met' : 'open') +
       '\ntier       ' + this.stats.tier + '  light ' + (this.root.dataset.light || '-') +
       '\nreduced    ' + (this.noMotion() ? 'yes' : 'no');
     if (this.el.dimdebug && this.el.dimdebug.style.display === 'block') {

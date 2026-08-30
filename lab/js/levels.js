@@ -23,7 +23,7 @@ Object.assign(FenceTheFarm.prototype, {
       record: r.record || 0, beaten: false, matched: false, flagged: false,
       stretched: false, flipped: false, longest: r.start[0], pausedAt: 0,
       prediction: null,
-      bonusOpen: false, bonusDone: false,
+      precise: true,            // mastery sets it false while its target is open
       tutBeat: 0, tutMoves: 0, tutNoticed: false
     };
     this.closeChoice();
@@ -59,8 +59,47 @@ Object.assign(FenceTheFarm.prototype, {
         return this.plankSay(this.recordLine());
       case 'misconception':
         return this.plankSay(this.t(this.lv.flipped ? 'instruction.mostGrass' : 'instruction.stretch'));
-      default: return this.retractPlank();           // mastery says nothing
+      /* Mastery used to say nothing at all - which also meant it never had an
+         actionable line, so the idle hand could never arm on this farm. It now
+         states whichever contract is open. */
+      default:
+        return this.plankSay(this.masteryLine());
     }
+  },
+  /* Distance feedback while the precision contract is open. It says how far
+     off and which way - never which shape to build. Hitting it exactly closes
+     the contract and opens the mastery one. */
+  precisionStep(area) {
+    const target = this.round().optionalTarget;
+    if (!target || this.lv.precise) return;
+    if (area === target) {
+      this.lv.precise = true;
+      this.track('exact_area_completed', { area: area, moves: this.stats.reversals });
+      this.sfx('record_success');
+      this.setGoat('happy');
+      this.bump(this.el['area-val'], 'ftf-pop', 420);
+      this.plankSay(this.t('feedback.exact').replace('48', String(target)));
+      this.after(this.noMotion() ? 0 : 1900, () => {
+        if (this.stats.phase !== 'play') return;
+        this.plankSay(this.t('mastery.max'));
+        this.vo('vo.final');
+      });
+      return;
+    }
+    const d = Math.abs(target - area);
+    const key = area < target ? 'feedback.short' : 'feedback.over';
+    this.showToast2(this.t(key).replace('2', String(d)), 1500);
+  },
+  /* A toast that carries an already-built string rather than a key. */
+  showToast2(line, ms) {
+    this.plankSay(line);
+    clearTimeout(this._toastT);
+    this._toastT = this.after(ms, () => { this._msg = null; this.levelPlank(); });
+  },
+  masteryLine() {
+    const target = this.round().optionalTarget;
+    if (target && !this.lv.precise) return this.t('bonus.make').replace('48', String(target));
+    return this.t('mastery.max');
   },
 
   /* One legal state to the next. */
@@ -236,7 +275,7 @@ Object.assign(FenceTheFarm.prototype, {
 
   /* Beat 8 — success. */
   tut8() {
-    this.plankSay(this.t('tut.success'));
+    this.plankSay(this.t('tut.success').replace('25', String(this.g.L * this.g.W)));
     this.vo('vo.nice');
     // Hold on the finished pasture so the revealed side lengths can be read
     // before the recap replaces them with its own cards.
@@ -471,10 +510,28 @@ Object.assign(FenceTheFarm.prototype, {
       });
     });
   },
+  /* Level 4 is two contracts, not one maximise with an optional extra.
+
+     First: build EXACTLY the target. That is a different skill from
+     maximising - it asks them to steer the relationship rather than push it
+     one way - and it is the reason the target is deliberately not the maximum.
+     Only once it is met does the farm ask for the largest area.
+
+     Reaching the square early does not skip the precision stage: succeed() is
+     gated on lv.precise, so the square simply waits its turn. */
   masteryBegin() {
     this.retractPlank();
     this.pulseOnly(null);
     this.setGoat('eat');
+    const target = this.round().optionalTarget;
+    if (target) {
+      this.lv.precise = false;
+      this.after(this.noMotion() ? 0 : 500, () => {
+        this.plankSay(this.t('bonus.make').replace('48', String(target)));
+      });
+    } else {
+      this.lv.precise = true;
+    }
     // After a long stall the number itself pulses. The answer is never given.
     const check = () => {
       if (this.dead || this.stats.phase !== 'play' || this.stats.completed) return;
@@ -498,6 +555,9 @@ Object.assign(FenceTheFarm.prototype, {
     return 0;
   },
   masteryStep(area, isBest) {
+    // While the precision contract is open, every move gets distance feedback:
+    // how far off they are, and which way. Never which shape to build.
+    if (!this.lv.precise) { this.precisionStep(area); return; }
     if (!isBest) return;
     const tier = this.tierFor(area);
     if (tier <= this.stats.tier) return;
@@ -507,45 +567,16 @@ Object.assign(FenceTheFarm.prototype, {
     else if (tier === 2) { this.setGoat('curious'); }
     else if (tier === 3) { this.setGoat('talk'); }
   },
+  /* By the time the square is reached the precision contract is already met -
+     it is a gate before success, not an extra afterwards - so this simply
+     closes the farm. The old post-success bonus flow (which reopened the
+     handle after completing, and needed a levelStep wrapper to watch for the
+     target) is gone with it. */
   masterySucceed() {
     this.after(700, () => {
       this.plankSay(this.t('success.r4'));
       this.showDims(true);
     });
-    // The optional exact-area build. Never required, and the way on stays open.
-    const target = this.round().optionalTarget;
-    if (target) {
-      this.after(1300, () => {
-        this.lv.bonusOpen = true;
-        this.stats.completed = false;          // the handle stays live for it
-        this.el.handle.style.cursor = 'grab';
-        // Announced on the sign, not on a bar of its own.
-        this.plankSay(this.t('bonus.make').replace('48', String(target)));
-        this.render();
-      });
-    }
     this.after(1500, () => this.offerNext('action.reveal'));
-  },
-  /* The bonus is checked on every state while it is open. */
-  bonusCheck(area) {
-    if (!this.lv.bonusOpen || this.lv.bonusDone) return;
-    const target = this.round().optionalTarget;
-    if (area !== target) return;
-    this.lv.bonusDone = true;
-    this.track('bonus_completed', { area: area });
-    this.el.bonus.classList.add('ftf-done');
-    this.el['bonus-txt'].textContent = this.t('bonus.done');
-    this.sfx('record_success');
-    this.setGoat('happy');
-    this.bump(this.el['area-val'], 'ftf-pop', 420);
   }
 });
-
-/* The bonus needs to see every state change, including ones after success. */
-(function (proto) {
-  const step = proto.levelStep;
-  proto.levelStep = function (prevArea, area, dir, isBest) {
-    step.call(this, prevArea, area, dir, isBest);
-    if (this.lv && this.lv.bonusOpen) this.bonusCheck(area);
-  };
-})(FenceTheFarm.prototype);

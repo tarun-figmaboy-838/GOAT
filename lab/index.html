@@ -14,7 +14,11 @@
 <div id="ftf-root">
   <div id="ftf-stage">
 
-    <img id="ftf-grass" src="assets/art/grass-bg.png" alt="">
+    <img id="ftf-grass" class="ftf-ground" src="assets/art/grass-bg.png" alt="">
+    <!-- The second sheet of ground. It waits off the right edge and is seen
+         only during the journey between farms, when both sheets slide left
+         together. Same texture, so the swap back at the end is invisible. -->
+    <img id="ftf-grass-2" class="ftf-ground" src="assets/art/grass-bg.png" alt="" aria-hidden="true">
     <!-- Level lighting: the only thing that changes between farms (§level variation). -->
     <div id="ftf-light"></div>
     <div id="ftf-vig"></div>
@@ -153,7 +157,7 @@
     <!-- Constant. Small, quiet, never animated (§UI hierarchy). -->
     <div id="ftf-fence-badge">
       <div class="ftf-card-in">
-        <div class="ftf-badge-cap" data-i18n="hud.fence">Fence</div>
+        <div class="ftf-badge-cap" data-i18n="hud.fence">Perimeter</div>
         <div id="ftf-fence-val">20 m</div>
         <!-- The perimeter is the one thing that never changes, and the card has
              to say so without a sentence. A padlock and one word do it. -->
@@ -168,7 +172,7 @@
         <div class="ftf-area-row">
           <span id="ftf-area-val">16</span><span class="ftf-area-unit">m²</span>
         </div>
-        <div class="ftf-area-cap" data-i18n="hud.grassArea">Grass area</div>
+        <div class="ftf-area-cap" data-i18n="hud.grassArea">Area</div>
       </div>
     </div>
 
@@ -210,13 +214,13 @@
       <div id="ftf-fin-a-lbl" class="ftf-cmp-lbl"><div class="ftf-cmp-in">
         <div class="ftf-cmp-tag" data-i18n="final.startBuild">Start build</div>
         <div class="ftf-cmp-fence"><i id="ftf-fa-dims">13 × 3 m</i></div>
-        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Fence</span> <b id="ftf-fa-per">32 m</b></div>
+        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Perimeter</span> <b id="ftf-fa-per">32 m</b></div>
         <div class="ftf-cmp-area"><span id="ftf-fa-area">0</span><i>m²</i></div>
       </div></div>
       <div id="ftf-fin-b-lbl" class="ftf-cmp-lbl"><div class="ftf-cmp-in">
         <div class="ftf-cmp-tag" data-i18n="final.bestBuild">Best build</div>
         <div class="ftf-cmp-fence"><i id="ftf-fb-dims">8 × 8 m</i></div>
-        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Fence</span> <b id="ftf-fb-per">32 m</b></div>
+        <div class="ftf-cmp-per"><span data-i18n="hud.fence">Perimeter</span> <b id="ftf-fb-per">32 m</b></div>
         <div class="ftf-cmp-area"><span id="ftf-fb-area">0</span><i>m²</i></div>
       </div></div>
     </div>
@@ -225,9 +229,14 @@
     <div id="ftf-emblem">
       <div class="ftf-hay">
         <div class="ftf-hay-in">
-          <div class="ftf-emb-1" data-i18n="final.strategy">Strategy discovered</div>
-          <div class="ftf-emb-2" data-i18n="final.balanced">Balanced sides → most area</div>
-          <div class="ftf-emb-3" data-i18n="final.qualifier">with the same rectangular perimeter</div>
+          <!-- Stated in the numbers they just made, not as a definition. The
+               old wording ("Balanced sides -> most area, with the same
+               rectangular perimeter") was a textbook line: true, and no help
+               to someone who had just dragged 13x3 up to 8x8. Their own climb
+               is the evidence, so their own climb is what it says. -->
+          <div class="ftf-emb-1" data-i18n="final.strategy">You found it</div>
+          <div class="ftf-emb-2" id="ftf-emb-sum">13 × 3 → 8 × 8</div>
+          <div class="ftf-emb-3" id="ftf-emb-rule">The closer the two sides, the more grass — same 32 m of fence</div>
         </div>
       </div>
       <button id="ftf-to-formula" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
@@ -241,7 +250,7 @@
          The strategy line is NOT printed here - it appears only if and when they
          land on the balanced shape on their own. -->
     <div id="ftf-live" data-screen-label="Live relationship">
-      <div id="ftf-live-hint">Drag the corner. The fence cannot change.</div>
+      <div id="ftf-live-hint">Drag the corner. The perimeter cannot change.</div>
       <div id="ftf-live-eq">
         <span id="ftf-live-lw">L + W = 16</span>
         <span id="ftf-live-a">A = 8 × 8 = 64 m²</span>
@@ -253,7 +262,7 @@
       </div>
       <div id="ftf-live-strategy"><b>Balanced sides</b> give the most area<i>for the same perimeter</i></div>
       <div id="ftf-live-act">
-        <button id="ftf-live-why" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus">See why</button>
+        <button id="ftf-live-whybtn" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.seeWhy">See why</button>
         <button id="ftf-live-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
       </div>
     </div>
@@ -309,10 +318,23 @@
             <span class="ftf-adv-eq ftf-adv-eq-a">A = L (16 − L)</span>
           </div>
           <div id="ftf-adv-4" class="ftf-adv-row ftf-adv-last">
-            <div data-i18n="adv.reveal">The path you dragged was this curve.</div>
+            <div data-i18n="adv.reveal">That curve is a parabola — its peak is your best build.</div>
             <button id="ftf-adv-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ================= THE JOURNEY BETWEEN FARMS =================
+         The old fence sinks, the ground scrolls past under a trotting goat,
+         the day moves on, and this swings down on its ropes to say where she
+         has arrived and how much of the walk is left. It is the only place the
+         farms are ever named and the only place progress is ever shown. -->
+    <div id="ftf-travel" aria-hidden="true">
+      <div id="ftf-travel-board">
+        <div id="ftf-travel-cap">Farm 2 of 4</div>
+        <div id="ftf-travel-name">Farm Record</div>
+        <div id="ftf-travel-dots"><i></i><i></i><i></i><i></i></div>
       </div>
     </div>
 
@@ -357,24 +379,24 @@
 
     <!-- String source for keys with no permanent home in the markup. -->
     <div id="ftf-strings">
-      <span data-i18n="tut.reason">Give her more grass</span>
-      <span data-i18n="tut.per">Your fence — 20 m around the outside</span>
-      <span data-i18n="tut.area">The grass inside is the area</span>
+      <span data-i18n="tut.reason">Same fence. More grass. Find out how.</span>
+      <span data-i18n="tut.per">Perimeter — 20 m of fence, locked</span>
+      <span data-i18n="tut.area">Area — the grass inside, L × W</span>
       <span data-i18n="tut.touch">Drag this corner</span>
-      <span data-i18n="tut.noticed">More grass — still 20 m</span>
-      <span data-i18n="tut.more">Can you give her even more?</span>
-      <span data-i18n="tut.challenge">Find the biggest area</span>
-      <span data-i18n="tut.success">Biggest grass area!</span>
-      <span data-i18n="tut.gotIt">You&#39;ve got it!</span>
-      <span data-i18n="instruction.record">Beat the record — 32 m²</span>
+      <span data-i18n="tut.noticed">Area went up. Perimeter is still 20 m.</span>
+      <span data-i18n="tut.more">Try another shape</span>
+      <span data-i18n="tut.challenge">Find the maximum area</span>
+      <span data-i18n="tut.success">Maximum area — 25 m²</span>
+      <span data-i18n="tut.gotIt">Same perimeter, bigger area</span>
+      <span data-i18n="instruction.record">Beat 32 m² — same perimeter</span>
       <span data-i18n="instruction.push">Push it further.</span>
       <!-- Level 3 is framed as an EXPERIMENT, never as advice. "Stretch it
            longer" reads as a recommendation and would reinforce the very
            misconception the level exists to dislodge. -->
       <span data-i18n="instruction.stretch">Test an idea: make the field longer</span>
-      <span data-i18n="instruction.mostGrass">Now find the largest area</span>
+      <span data-i18n="instruction.mostGrass">Now find the maximum area</span>
       <span data-i18n="feedback.longerLess">Longer field. Less area.</span>
-      <span data-i18n="feedback.tryMore">Better. Can you do more?</span>
+      <span data-i18n="feedback.tryMore">Better. Keep going.</span>
       <span data-i18n="record.new">New record — 33 m²</span>
       <span data-i18n="record.match">Record matched — 32 m²</span>
       <span data-i18n="hud.fixed">Fixed</span>
@@ -393,13 +415,17 @@
       <span data-i18n="predict.right">Your prediction matched the result.</span>
       <span data-i18n="predict.wrong">Your experiment gave you the evidence.</span>
       <span data-i18n="success.r2">Record smashed!</span>
-      <span data-i18n="success.r3">Longer wasn't more grass.</span>
+      <span data-i18n="success.r3">Longer was not more area.</span>
       <span data-i18n="success.r4">Master build.</span>
-      <span data-i18n="bonus.make">Make exactly 48 m²</span>
+      <span data-i18n="bonus.make">Build exactly 48 m²</span>
+      <span data-i18n="mastery.max">Now find the maximum area</span>
+      <span data-i18n="feedback.short">2 m² short — grow it</span>
+      <span data-i18n="feedback.over">2 m² over — bring it back</span>
+      <span data-i18n="feedback.exact">Exactly 48 m². Precision build.</span>
       <span data-i18n="bonus.done">Exactly 48 m². Same fence.</span>
       <span data-i18n="action.reveal">See the proof</span>
       <span data-i18n="final.longest">Your longest</span>
-      <span data-i18n="a11y.area">Grass area</span>
+      <span data-i18n="a11y.area">Area</span>
       <span data-i18n="a11y.sqm">square metres</span>
     </div>
 

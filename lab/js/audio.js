@@ -271,6 +271,14 @@ Object.assign(FenceTheFarm.prototype, {
       case 'bell_ding':          this.pluck(1568 * v, 0.09, 0.62); this.after(60, () => this.pluck(2093 * v, 0.06, 0.4)); break;
       case 'cheer_land':         this.wood(150 * v, 0.10, 0.16, 1.2); break;
       case 'button_press':       this.wood(196 * v, 0.11, 0.15); break;
+      /* The journey. A hoof on grass is a soft, low, very short thump - the
+         two weights alternate so seven of them read as an animal walking and
+         not as a metronome. The signpost is rope stretching, then the board
+         knocking against it as it settles. */
+      case 'hoof':               this.wood(96 * v, 0.055, 0.11, 1.5); break;
+      case 'hoof_soft':          this.wood(78 * v, 0.05, 0.075, 1.4); break;
+      case 'sign_swing':         this.rasp(190, 95, 0.34, 0.045, 1.1);
+                                 this.after(240, () => this.wood(232 * v, 0.11, 0.17, 1.8)); break;
       /* the goat */
       case 'goat_bleat':         if (!this.playGoatVoice(false)) this.bleat(0); break;
       case 'goat_bleat_happy':   if (!this.playGoatVoice(true)) this.bleat(1); break;

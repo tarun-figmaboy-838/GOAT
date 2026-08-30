@@ -259,6 +259,22 @@ Object.assign(FenceTheFarm.prototype, {
     G.tx = cx; G.ty = cy;
     if (G.state !== 'walk' && G.state !== 'enter' && G.state !== 'happy') this.setGoat('walk');
   },
+  /* The journey between farms: her legs move and her feet stay. The ground is
+     what is travelling, so if she also translated she would out-walk it and
+     arrive at the next farm somewhere off the right of the screen. She faces
+     due east, into the walk. */
+  goatTravel(on) {
+    const C = this.goatInit();
+    C.travelling = !!on;
+    if (on) {
+      this.setGoat('walk');
+      C.wantHeading = 0;
+      C.heading = 0;
+    } else {
+      C.speed = 0;
+      this.setGoat('idle');
+    }
+  },
   /* Mastery farm nudge: she glances at the number instead of being told. */
   lookAtArea() {
     this.goat.lookAt = [1140, 480];
@@ -455,6 +471,10 @@ class GoatController {
 
   updateMovement(dt) {
     const g = this.game, G = this.G;
+    /* On the journey between farms the walk cycle plays but she does not
+       travel: the ground is doing that underneath her. updateAnimation runs off
+       dt, not off speed, so her legs keep moving either way. */
+    if (this.travelling) return;
     const walking = G.state === 'walk' || G.state === 'enter';
     if (!walking) { this.speed = 0; return; }
 
@@ -483,15 +503,47 @@ class GoatController {
     G.x += Math.cos(rad) * this.speed * dt;
     G.y += Math.sin(rad) * this.speed * dt;
 
-    // She is walking, so she must not be able to walk out: clamp every frame
-    // against the live safe area - EXCEPT while she is walking on. The whole
-    // point of the entrance is that she starts where the title left her, which
-    // is outside the pen; clamping her then snapped her to the pen edge and
-    // made her appear from nowhere instead of walking in from the banner.
-    if (G.state !== 'enter') {
-      G.x = Math.max(this.b[0], Math.min(this.b[1], G.x));
-      G.y = Math.max(this.b[2], Math.min(this.b[3], G.y));
-    }
+    // Staying inside the fence is not this method's business any more: it was
+    // only ever enforced here, which meant it was only ever enforced while she
+    // happened to be walking. keepInside now does it in every state.
+  }
+
+  /* --------------------------------------------------------- the fence wins --
+     The pasture can move while she is standing still, and it does: the player
+     drags a side in and the fence closes over a goat who is grazing, bleating
+     or celebrating. The clamp used to live inside the walking branch above, so
+     none of those states was ever pulled back - and moveGoatInside politely
+     declined to move her at all while she was happy, so a pen squeezed shut
+     during a celebration left her standing on the rail for good.
+
+     This runs every frame, whatever she is doing. She gives ground at her own
+     walking pace rather than being snapped, so it reads as a goat stepping out
+     of the way of the fence. The one exception is her walk-on: the whole point
+     of the entrance is that she starts outside. */
+  keepInside(dt) {
+    const g = this.game, G = this.G, b = this.b;
+    /* No pasture exists between farms - the old one has sunk and the new one
+       has not been laid - so there is no fence to be pushed back inside, and
+       bounds() would only drag her to the empty-stage default. */
+    if (!b || G.state === 'enter' || this.travelling ||
+        g.stats.phase === 'title' || g.stats.phase === 'travel') return;
+    const tx = Math.max(b[0], Math.min(b[1], G.x));
+    const ty = Math.max(b[2], Math.min(b[3], G.y));
+    const dx = tx - G.x, dy = ty - G.y, d = Math.hypot(dx, dy);
+    if (d < 0.01) return;
+    if (g.noMotion()) { G.x = tx; G.y = ty; G.tx = tx; G.ty = ty; return; }
+    const cell = g.activePen() ? g.activePen().cell : 72;
+    // Faster than she can walk, so she can never outrun the fence, but still a
+    // walk rather than a teleport.
+    const step = GOAT_CONFIG.maxWalkSpeed * (cell / 72) * dt * 1.5;
+    if (d <= step) { G.x = tx; G.y = ty; } else { G.x += dx / d * step; G.y += dy / d * step; }
+    /* She faces the way she is giving ground and her legs move with her - but a
+       bleat and a celebration are held frames whose whole point is the frame,
+       so those are left to finish and only her position is corrected. */
+    if (G.state === 'happy' || G.state === 'talk') return;
+    this.wantHeading = Math.atan2(dy, dx) * 180 / Math.PI;
+    G.tx = tx; G.ty = ty;
+    if (G.state !== 'walk') g.setGoat('walk');
   }
   arrive() {
     const G = this.G, g = this.game;
@@ -667,6 +719,7 @@ class GoatController {
     this.updateBounds();
     this.updateBehaviour(dt);
     this.updateMovement(dt);
+    this.keepInside(dt);          // the fence has the last word on where she is
     this.updateHeading(dt);
     if (this.view < 1) this.updateSide(dt);
     if (this.view > 0) this.updateAnimation(dt);

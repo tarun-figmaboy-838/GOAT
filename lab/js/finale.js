@@ -48,7 +48,7 @@ Object.assign(FenceTheFarm.prototype, {
 
     this.el.bonus.classList.remove('ftf-in');
     this.el.ghost.style.opacity = '0';
-    this.el.handle.style.opacity = '0';
+    this.showHandle(false);
     this.showDims(false);
     this.el['area-card'].style.opacity = '0';
     this.el['fence-badge'].style.opacity = '0';
@@ -110,6 +110,7 @@ Object.assign(FenceTheFarm.prototype, {
 
   /* The game's own ending is the same recap, then the interactive proof. */
   finaleStart() {
+    this.closeLive();
     const r = this.ROUNDS[3];
     this.retractPlank();
     this.compareBuilds(r.start, r.optimum, r.perimeter, { then: () => { this._nextIsPeak = true; this.offerNext('action.reveal'); } });
@@ -250,7 +251,7 @@ Object.assign(FenceTheFarm.prototype, {
       this.el['area-card'].style.opacity = '1';
       this.el['area-val'].textContent = String(r.start[0] * r.start[1]);
       this.buildFence(600, () => {
-        this.el.handle.style.opacity = '1';
+        this.showHandle(true);
         this.pulseOnly('handle');
         this.peakCurve();
         this.el.curve.style.opacity = '1';
@@ -302,7 +303,7 @@ Object.assign(FenceTheFarm.prototype, {
     const g = this.g;
     this.pulseOnly(null);
     this.el.glow.style.opacity = '0';
-    this.el.handle.style.cursor = 'default';
+    this.el.handle.classList.remove('ftf-live');   // seen, but the drag is over
     this.bump(this.el['area-val'], 'ftf-hero', 620);
     this.after(90, () => {
       if (!this.noMotion()) this.pens.main.nodes.forEach(el => { el.style.animation = 'ftf-rise 220ms cubic-bezier(.34,1.4,.64,1)'; });
@@ -315,8 +316,15 @@ Object.assign(FenceTheFarm.prototype, {
       this.el['curve-peak'].style.opacity = '1';
       this.musicTier(4);
     });
-    // The emblem assembles rather than popping.
+    // The emblem assembles rather than popping, and it speaks in the numbers
+    // this player actually climbed through - not in textbook terms.
     this.after(900, () => {
+      const r = this.ROUNDS[g.round];
+      this.el['emb-sum'].textContent =
+        r.start[0] + ' × ' + r.start[1] + ' = ' + (r.start[0] * r.start[1]) + ' m²' +
+        '   →   ' + g.L + ' × ' + g.W + ' = ' + (g.L * g.W) + ' m²';
+      this.el['emb-rule'].textContent =
+        'The closer the two sides, the more grass — same ' + g.perimeter + ' m of fence';
       this.el.emblem.style.display = 'block';
       if (!this.noMotion()) this.el.emblem.style.animation = 'ftf-fadein 520ms ease';
       this.sfx('record_success');
@@ -327,13 +335,14 @@ Object.assign(FenceTheFarm.prototype, {
   /* ------------------------------------------------------------- phase 5 --
      The formulas resolve on the field that is still standing. */
   formulaScreen() {
+    this.closeLive();
     this.clearTimers();
     this.stats.phase = 'formula';
     const g = this.g;
     this.el.emblem.style.display = 'none';
     this.el.curve.style.opacity = '0';
     this.el['curve-peak'].style.opacity = '0';
-    this.el.handle.style.opacity = '0';
+    this.showHandle(false);
     this.el.fm.style.display = 'block';
     ['fm-per', 'fm-area'].forEach(k => { this.el[k].style.opacity = '0'; });
     this.el['fm-core'].style.opacity = '0';
@@ -390,6 +399,7 @@ Object.assign(FenceTheFarm.prototype, {
   /* --------------------------------------------------- optional SEE WHY --
      The meter it turns out they were already reading becomes a real graph. */
   advancedScreen() {
+    this.closeLive();
     this.clearTimers();
     const g = this.g;
     this.el.fm.style.display = 'none';
@@ -471,6 +481,7 @@ Object.assign(FenceTheFarm.prototype, {
 
   /* ------------------------------------------------------------ complete -- */
   completeScreen() {
+    this.closeLive();
     this.clearTimers();
     this.stats.phase = 'complete';
     this.el.fm.style.display = 'none';
@@ -482,7 +493,7 @@ Object.assign(FenceTheFarm.prototype, {
     this.el.trace.style.opacity = '0';
     this.el['area-card'].style.opacity = '0';
     this.el['fence-badge'].style.opacity = '0';
-    this.el.handle.style.opacity = '0';
+    this.showHandle(false);
     this.showDims(false);
     // The winning pasture is rebuilt centre stage - the same sink-and-rise
     // the game uses between farms, so the world stays continuous.
@@ -511,6 +522,7 @@ Object.assign(FenceTheFarm.prototype, {
 
   /* ======================================================== EXPLORE ===== */
   exploreScreen() {
+    this.closeLive();
     this.clearTimers();
     this.stats.phase = 'explore';
     this.stats.completed = false;
@@ -564,7 +576,7 @@ Object.assign(FenceTheFarm.prototype, {
       this.el.fill.style.opacity = '1';
       this.showDims(false);
       this.buildFence(650, () => {
-        this.el.handle.style.opacity = '1';
+        this.showHandle(true);
         this.pulseOnly('handle');
         this.moveGoatInside(true);
         this.setGoat('eat');

@@ -71,11 +71,23 @@ class GoatMascotController {
      the first celebration must not flicker. */
   preload() {
     this.ok = {};
+    /* The images are held on the controller as well as loaded. Loaded is not
+       the same as ready to paint: without an explicit decode the browser still
+       has to turn 620 x 620 of PNG into a bitmap on the very frame it is asked
+       to crossfade it in, which is one dropped frame per pose - eleven of them
+       inside eight seconds, every one landing on a beat. Decoding up front
+       moves all of that off the performance, and keeping the reference stops
+       the decoded bitmap being thrown away before she needs it. */
+    this.imgs = {};
     Object.keys(GOAT_POSES).forEach(k => {
       const img = new Image();
-      img.onload = () => { this.ok[k] = true; };
+      img.onload = () => {
+        this.ok[k] = true;
+        if (img.decode) img.decode().catch(() => {});
+      };
       img.onerror = () => { this.ok[k] = false; };
       img.src = POSE_BASE + GOAT_POSES[k].src;
+      this.imgs[k] = img;
     });
   }
 

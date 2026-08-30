@@ -19,6 +19,9 @@
 */assets/art/goat-sprite*
 */assets/art/fence-ui*
 */assets/goat/*.raw.png
+# The single-sheet celebration goat, superseded by the eleven separate poses the
+# mascot controller animates. Nothing references it any more; 1.75 MB.
+*/assets/goat/goat-celebration.png
 
 # Loose source art at the repo root.
 assets/

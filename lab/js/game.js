@@ -637,6 +637,22 @@ class FenceTheFarm {
     return true;
   }
 
+  /* ------------------------------------------------- one fact, one place --
+     The handle is a 104 x 124 box that never leaves the DOM. Whether it can be
+     seen and whether it can be touched are the same fact, so they are set
+     together: while it is invisible it takes no pointer events and owns no
+     cursor at all, and the pointer over empty grass stays a plain pointer.
+     The stylesheet, not JavaScript, decides which cursor a live handle shows,
+     so no inline value can ever get left behind on a screen that has none. */
+  showHandle(on) {
+    const h = this.el.handle;
+    h.style.opacity = on ? '1' : '0';
+    h.classList.toggle('ftf-live', !!on);
+    h.classList.remove('ftf-held');
+    h.style.cursor = '';
+    h.style.pointerEvents = '';
+  }
+
   bindInput() {
     const h = this.el.handle;
 
@@ -650,7 +666,7 @@ class FenceTheFarm {
       this._grabDy = (e.clientY - rc.top) / s - hp[1];
       this.stats.dragging = true;
       this.pokeIdle();                    // taking hold is the clearest activity there is
-      h.style.cursor = 'grabbing';
+      h.classList.add('ftf-held');
       this.el.glow.style.animation = 'none';
       this.el.glow.style.transform = 'scale(1.16)';
       if (this.options.snapGuide !== 'Never') { this.el.grid.style.opacity = '.1'; this.el.guide.style.opacity = '.42'; }
@@ -683,7 +699,7 @@ class FenceTheFarm {
     const up = () => {
       if (!this.stats.dragging) return;
       this.stats.dragging = false;
-      h.style.cursor = this.stats.completed ? 'default' : 'grab';
+      h.classList.remove('ftf-held');
       this.el.glow.style.transform = '';
       if (!this.noMotion() && this._pulse === 'handle') this.el.glow.style.animation = 'ftf-breathe 2100ms ease-in-out infinite';
       if (this.options.snapGuide !== 'Always') this.el.grid.style.opacity = '0';
@@ -715,11 +731,10 @@ class FenceTheFarm {
        to a static board leads there instead. */
     this.el['to-formula'].addEventListener('click', () => { this.sfx('button_press'); this.explainScreen(); });
     this.el['see-why'].addEventListener('click', () => { this.sfx('button_press'); this.explainScreen(); });
-    this.el['live-why'].addEventListener('click', () => { this.sfx('button_press'); this.explainWhy(); });
+    this.el['live-whybtn'].addEventListener('click', () => { this.sfx('button_press'); this.explainWhy(); });
     this.el['live-done'].addEventListener('click', () => {
       this.sfx('button_press');
-      this.el.live.classList.remove('ftf-on');
-      this.el.curve.classList.remove('ftf-live-pos');
+      this.closeLive();
       this.completeScreen();
     });
     this.el['adv-done'].addEventListener('click', () => { this.sfx('button_press'); this.completeScreen(); });
@@ -748,7 +763,11 @@ class FenceTheFarm {
      if the area falls, the number falls, and the player can recover at once. */
   evaluateRelease() {
     if (this.stats.phase === 'explore') { this.showDims(true); return; }
-    if (this.g.L === this.g.W && !this.stats.completed && this.dragAllowed()) { this.succeed(); return; }
+    /* On the mastery farm the square does not end the level until the precision
+       contract has been met - otherwise a player who happens to drag through
+       8 x 8 first would skip the precision stage entirely. It simply waits. */
+    const held = this.lv && this.lv.precise === false;
+    if (this.g.L === this.g.W && !this.stats.completed && this.dragAllowed() && !held) { this.succeed(); return; }
     this.levelRelease();
   }
 
@@ -779,11 +798,20 @@ class FenceTheFarm {
      "More area. Same 20 m fence." would be prompting them to act on nothing. */
   lineType(line) {
     const asks = [
-      this.t('tut.touch'), this.t('tut.more'), this.t('tut.challenge'),
+      this.t('tut.reason'), this.t('tut.touch'), this.t('tut.more'), this.t('tut.challenge'),
       this.t('instruction.drag'), this.t('instruction.record'), this.t('instruction.push'),
-      this.t('instruction.stretch'), this.t('instruction.mostGrass'), this.t('bonus.make')
+      this.t('instruction.stretch'), this.t('instruction.mostGrass'),
+      this.t('mastery.max'), this.t('bonus.make'),
+      this.t('feedback.short'), this.t('feedback.over')
     ];
-    return asks.indexOf(line) >= 0 ? 'action' : 'informational';
+    /* Several of these lines carry a number that changes with the farm - the
+       record to beat, the exact target, how far short the build is. They are
+       compared with the digits blanked out, so "Beat the record - 32 m" and
+       "Beat the record - 48 m" count as the same request and both go on to
+       offer idle help. Matching on identity meant they silently did not. */
+    const norm = s => String(s || '').replace(/\d+/g, '#');
+    const n = norm(line);
+    return asks.some(a => norm(a) === n) ? 'action' : 'informational';
   }
   /* Round a sign's middle up to a whole number of straw periods. The tile and
      both cap cuts share one 75px lattice, so a whole-period middle means the
@@ -1003,6 +1031,7 @@ class FenceTheFarm {
 
   /* ============================== SCREEN 1 · TITLE ======================== */
   titleScreen() {
+    this.closeLive();
     this.clearTimers();
     this.stats.phase = 'title';
     this.stats.completed = false;
@@ -1110,8 +1139,23 @@ class FenceTheFarm {
   }
 
   /* ====================== ROUND SCAFFOLD ================================= */
+  /* ------------------------------------------------------ closing the live --
+     The live explanation used to be closed by exactly one button. Every other
+     way out of it - the proof, the finale, a restart, the title - left ftf-on
+     set, so its hint, its two pills, its derivation and its buttons went on
+     rendering over the top of whatever screen came next, and its curve stayed
+     parked in the right half. Closing it is now one call that every screen
+     entry makes, so no new route can ever forget. */
+  closeLive() {
+    this.el.live.classList.remove('ftf-on');
+    this.el['live-why'].classList.remove('ftf-in');
+    this.el['live-strategy'].classList.remove('ftf-in');
+    this.el.curve.classList.remove('ftf-live-pos');
+  }
+
   startRound(ri) {
     this.clearTimers();
+    this.closeLive();
     // NOT the title: startGame is still hauling it up its ropes, and hiding it
     // here would cut that short. It hides itself when it has finished leaving.
     ['fin', 'fm', 'adv', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
@@ -1136,8 +1180,7 @@ class FenceTheFarm {
     this.el['curve-peak'].style.opacity = '0';
     this.el.plank.style.opacity = '0';
     this.el.plank.style.transform = 'translateX(-50%)';
-    this.el.handle.style.opacity = '0';
-    this.el.handle.style.cursor = 'grab';
+    this.showHandle(false);
     this.el.handle.style.transform = 'translate(0,0)';
     this.el.next.style.opacity = '0'; this.el.next.style.pointerEvents = 'none';
     this.el.burst.style.opacity = '0';
@@ -1209,7 +1252,7 @@ class FenceTheFarm {
   beginPlay() {
     this.stats.phase = 'play';
     this.el.handle.style.transition = 'opacity 300ms ease';
-    this.el.handle.style.opacity = '1';
+    this.showHandle(true);
     this.stats.t0 = performance.now();
     this.render();
     this.levelBegin();
@@ -1265,13 +1308,94 @@ class FenceTheFarm {
     this.sfx('button_press');
     if (this.g.round >= 3) { this.finaleStart(); return; }
     this.showDims(false);
-    this.el.handle.style.opacity = '0';
+    this.showHandle(false);
     this.el.ghost.style.opacity = '0';
     this.retractPlank();
     const wait = Math.max(this.dropPen('main'), this.dropPen('finA'), this.dropPen('finB'));
     this.el.fin.style.display = 'none';
     [0, 1].forEach(i => { if (this['_fg' + i]) this['_fg' + i].style.opacity = '0'; });
-    this.after(wait, () => this.startRound(this.g.round + 1));
+    this.after(wait, () => this.travelTo(this.g.round + 1));
+  }
+
+  /* --------------------------------------------------------- the journey --
+     Between farms the player used to watch one fence sink, then a full second
+     of empty grass, then another fence rise in the same shot - so farm 2 read
+     as farm 1 with a different rectangle, and nothing ever said how far they
+     had come. Now they travel: the ground scrolls past under a trotting goat,
+     the day moves on while they walk rather than while the screen is empty,
+     and a signpost swings down to name the farm they have reached and mark it
+     off against the four. The dead second became the reward.
+
+     Nothing here is on the critical path. Under reduced motion the whole
+     journey is skipped and the next farm simply starts, exactly as before. */
+  travelTo(ri) {
+    if (this.noMotion()) { this.startRound(ri); return; }
+    const D = 780, W = 1280;
+    const A = this.el.grass, B = this.el['grass-2'];
+    this.stats.phase = 'travel';
+    this.el.fill.style.transition = 'none';
+    this.el.fill.style.opacity = '0';
+    /* The old fence has finished sinking by now, but its pieces are retired on
+       their own timers - and a leftover post would hang motionless in the air
+       while the ground scrolled away underneath it. The field does not travel;
+       only the ground does. So the pen is emptied outright first. */
+    this.dropAllPens({ instant: true });
+    this.root.classList.add('ftf-travelling');
+
+    /* Two sheets of ground moving as one. The second waits exactly one screen
+       to the right, so what arrives is the same texture and the snap back at
+       the end lands on an identical frame - there is nothing to see. */
+    [A, B].forEach(el => { el.style.transition = 'none'; el.style.transform = 'translateX(0)'; });
+    void A.offsetWidth;
+    [A, B].forEach(el => {
+      el.style.transition = 'transform ' + D + 'ms cubic-bezier(.36,0,.28,1)';
+      el.style.transform = 'translateX(' + (-W) + 'px)';
+    });
+
+    // The day advances while they are walking, which is the only time it reads
+    // as a day advancing. The grass cross-fades its light over 900ms.
+    this.setLight(this.ROUNDS[ri].light);
+    this.goatTravel(true);
+    this.travelSign(ri);
+    this.hoofbeats(D);
+    this.sfx('farm_turn');
+    this.track('farm_travel', { to: ri + 1 });
+
+    this.after(D, () => {
+      [A, B].forEach(el => { el.style.transition = 'none'; el.style.transform = 'translateX(0)'; });
+      this.root.classList.remove('ftf-travelling');
+      this.goatTravel(false);
+      this.sfx('bird');                       // she has arrived somewhere new
+      this.startRound(ri);
+    });
+  }
+
+  /* The signpost. One CSS animation carries in, hold and out, so a timer that
+     never fires cannot leave it hanging over the farm. */
+  travelSign(ri) {
+    const t = this.el.travel, r = this.ROUNDS[ri];
+    this.el['travel-cap'].textContent = 'Farm ' + (ri + 1) + ' of ' + this.ROUNDS.length;
+    this.el['travel-name'].textContent = r.name;
+    const dots = this.el['travel-dots'].children;
+    for (let i = 0; i < dots.length; i++) {
+      dots[i].className = i < ri ? 'ftf-done' : (i === ri ? 'ftf-now' : '');
+    }
+    t.classList.remove('ftf-in');
+    void t.offsetWidth;                        // restart, even farm after farm
+    t.classList.add('ftf-in');
+    /* startRound clears the game's timers halfway through this, so the two
+       that have to outlive it are the keeping kind. */
+    this.afterKeep(280, () => this.sfx('sign_swing'));
+    this.afterKeep(1620, () => t.classList.remove('ftf-in'));
+  }
+
+  /* Seven steps across the journey, alternating weight so it reads as an
+     animal walking rather than as a metronome. */
+  hoofbeats(ms) {
+    const n = 7, gap = ms / n;
+    for (let i = 0; i < n; i++) {
+      this.afterKeep(Math.round(i * gap + 40), () => this.sfx(i % 2 ? 'hoof_soft' : 'hoof'));
+    }
   }
 
   /* -------------------------------------------------- rebuild from state -- */
@@ -1283,8 +1407,7 @@ class FenceTheFarm {
     this.el['fence-badge'].style.opacity = playing ? '1' : '0';
     this.el['area-card'].style.opacity = playing ? '1' : '0';
     this.el.goat.style.opacity = '1';
-    this.el.handle.style.opacity = this.dragAllowed() && !s.completed ? '1' : '0';
-    this.el.handle.style.cursor = s.completed ? 'default' : 'grab';
+    this.showHandle(this.dragAllowed() && !s.completed);
     this.el.fill.style.opacity = s.phase === 'title' ? '0' : '1';
     this.el.field.style.transform = 'scale(1)';
     this.el.burst.style.opacity = '0';
