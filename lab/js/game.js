@@ -88,6 +88,7 @@ class FenceTheFarm {
     this.VO = {
       'vo.reason':    'This goat needs more grass.',
       'vo.fence':     'You have 20 metres of fence.',
+      'vo.area':      'The grass inside the fence is the area.',
       'vo.drag':      'Drag the corner.',
       'vo.same':      'The fence stayed the same, but the grass grew.',
       'vo.longer':    'Hmm. Longer did not mean more grass.',
@@ -500,18 +501,43 @@ class FenceTheFarm {
     // the grass, the way a measurement should. They only appear once the shape
     // is found, which is always the square - never the deepest or widest pen -
     // so there is always room below and to the right for them.
-    const a = this.penPx(p, L / 2, W), b = this.penPx(p, L, W / 2);
-    const M = this.MOD;
+    /* Each measured side gets a dotted golden line running its full length,
+       with its number card sitting ON the line's midpoint - so "8 m" IS the
+       bottom edge, visibly, rather than a number floating near the fence. The
+       lines sit one comfortable step outside the fence art. */
+    const o = this.fenceOver(), c = p.cell;
+    const bl = this.penPx(p, 0, W), br = this.penPx(p, L, W), tr = this.penPx(p, L, 0);
+    const yb = bl[1] + o.down * c + 14;                  // below the bottom run
+    const xr = tr[0] + o.side * c + 14;                  // right of the right run
+    const set = (id, x1, y1, x2, y2) => {
+      ['', '-gl'].forEach(sfx => {
+        const el = this.el[id + sfx];
+        el.setAttribute('x1', x1); el.setAttribute('y1', y1);
+        el.setAttribute('x2', x2); el.setAttribute('y2', y2);
+      });
+    };
+    set('mL', bl[0], yb, br[0], yb);
+    set('mW', xr, tr[1], xr, br[1]);
+    const dot = (id, x, y) => { this.el[id].setAttribute('cx', x); this.el[id].setAttribute('cy', y); };
+    dot('mL-a', bl[0], yb); dot('mL-b', br[0], yb);
+    dot('mW-a', xr, tr[1]); dot('mW-b', xr, br[1]);
+
+    /* The card sits BESIDE its line, not on it: centred on the line it covers
+       the dots and reads as a collision. Below the bottom line, right of the
+       side line - clamped so a deep Explore shape cannot push it off stage. */
     this.el['dim-w'].textContent = L + ' m';
-    this.el['dim-w'].style.left = a[0] + 'px';
-    this.el['dim-w'].style.top = (a[1] + (M.POST.h - M.POST.oy) * p.cell + p.cell * 0.16) + 'px';
+    this.el['dim-w'].style.left = ((bl[0] + br[0]) / 2) + 'px';
+    this.el['dim-w'].style.top = Math.min(yb + 38, 688) + 'px';
     this.el['dim-h'].textContent = W + ' m';
-    this.el['dim-h'].style.left = (b[0] + M.POST.w * 0.5 * p.cell + p.cell * 0.22) + 'px';
-    this.el['dim-h'].style.top = b[1] + 'px';
+    this.el['dim-h'].style.left = Math.min(xr + 56, 1198) + 'px';
+    this.el['dim-h'].style.top = ((tr[1] + br[1]) / 2) + 'px';
   }
   showDims(on) {
+    // One soft chime the moment the measurements appear - never on re-calls.
+    if (on && this.el.measure && !this.el.measure.classList.contains('ftf-in')) this.sfx('chime');
     this.el['dim-w'].style.opacity = on ? '1' : '0';
     this.el['dim-h'].style.opacity = on ? '1' : '0';
+    if (this.el.measure) this.el.measure.classList.toggle('ftf-in', !!on);
   }
   updateGuide() {
     const g = this.g;
@@ -912,6 +938,29 @@ class FenceTheFarm {
       this.el['ask-q'].style.display = '';
     });
   }
+  /* ----------------------------------------------------- the spotlight ----
+     Dims the stage and lifts the named elements above the dim. One subject at
+     a time: calling it again lowers whatever was lit before, so two things can
+     never be spotlit at once - that would defeat the pointing. */
+  spotlight(ids) {
+    (this._lit || []).forEach(el => el.classList.remove('ftf-lit', 'ftf-beacon'));
+    this._lit = [];
+    if (!ids || !ids.length) {
+      this.el.veil.classList.remove('ftf-in');
+      this.el.modules.classList.remove('ftf-fade');   // lights fully back up
+      return;
+    }
+    this.el.veil.classList.add('ftf-in');
+    ids.forEach(k => {
+      const el = this.el[k]; if (!el) return;
+      el.classList.add('ftf-lit');
+      this._lit.push(el);
+    });
+    // The sign does the pointing, so it is always above the veil too.
+    this.el.plank.classList.add('ftf-lit');
+    this._lit.push(this.el.plank);
+  }
+
   /* The fixed perimeter is the conceptual anchor, so when it needs pointing at
      it draws attention to itself once rather than being narrated. */
   lockPulse() {
@@ -960,6 +1009,7 @@ class FenceTheFarm {
     // Explore leaves the side lengths on screen, and Done comes straight back
     // here - so the title has to put them away or they hang over the logo.
     this.showDims(false);
+    if (this.spotlight) this.spotlight(null);
     this.dropAllPens({ instant: true });
     ['fin', 'fm', 'adv', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
     this.el.emblem.style.display = 'none';
@@ -972,6 +1022,22 @@ class FenceTheFarm {
     this.goat.x = 640; this.goat.y = 520; this.goat.tx = 640; this.goat.ty = 520; this.goat.face = -1;
     this.setGoat('idle');
     this.syncView();
+    // On the title she is tappable: a poke gets a bleat and a little hop, with
+    // a cooldown so mashing cannot spam her. Everywhere else she stays
+    // pointer-transparent so she can never block the maths.
+    this.el['goat-side'].style.pointerEvents = 'auto';
+    this.el['goat-side'].style.cursor = 'pointer';
+    if (!this._goatPoke) {
+      this._goatPoke = () => {
+        if (this.stats.phase !== 'title' || this._pokeCool) return;
+        this._pokeCool = true;
+        this.after(1100, () => { this._pokeCool = false; });
+        this.goat.jump = 0.55;
+        this.setGoat('talk');
+        this.sfx('bleat');
+      };
+      this.el['goat-side'].addEventListener('pointerdown', this._goatPoke);
+    }
     this.el.play.style.animation = '';
     if (!this.noMotion()) this.el.logo.style.animation = 'ftf-logo-drop 1150ms cubic-bezier(.3,.7,.3,1) both';
     else this.el.logo.style.animation = '';
@@ -1033,6 +1099,8 @@ class FenceTheFarm {
       this.el.grass.style.transform = 'scale(1)';
     });
 
+    // Leaving the title, she goes back to being scenery the pointer ignores.
+    this.el['goat-side'].style.pointerEvents = 'none';
     // She looks up at the departing sign, then heads for her field.
     this.setGoat('curious');
     this.goat.face = 1;

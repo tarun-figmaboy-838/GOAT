@@ -18,6 +18,14 @@ Object.assign(FenceTheFarm.prototype, {
   playGoatCelebration(then) {
     if (this._cheering) return;                  // never twice for one farm
     this._cheering = true;
+    /* The hand-off deliberately survives clearTimers() so it cannot be lost -
+       but that also means it survives a RESTART. If the farm has changed by
+       the time it fires, running `then` would push the OLD farm's success into
+       the new one (the QA caught it driving a fresh tutorial to beat 9). The
+       generation stamp lets the hand-off notice it is stale and stand down. */
+    this._cheerGen = (this._cheerGen || 0) + 1;
+    const gen = this._cheerGen;
+    const safeThen = then && (() => { if (this._cheerGen === gen) then(); });
 
     this.lockInput(true);
     // A question left open would sit on top of her; put it away rather than
@@ -37,7 +45,7 @@ Object.assign(FenceTheFarm.prototype, {
        fired clearTimers() mid-celebration the explanation would never arrive
        and the farm would sit blurred and unplayable. */
     let handed = false;
-    const done = () => { if (handed) return; handed = true; this.endCelebration(then); };
+    const done = () => { if (handed) return; handed = true; this.endCelebration(safeThen); };
     this.mascot().playLevelComplete(done);
     // Comfortably past the 8s performance: this is a safety net for a
     // controller that somehow never reports finishing, not the usual path.

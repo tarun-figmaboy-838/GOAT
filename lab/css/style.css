@@ -150,6 +150,33 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 
 /* Side lengths. These are a measurement the player is meant to read, so they
    sit on their own board rather than floating as text on grass. */
+/* ------------------------------------------------- measurement lines ----
+   Dotted, golden, and quietly marching, with a dot capping each end. The
+   round caps on a zero-length dash are what draw the dots; glow and core use
+   the same dash rhythm so the two layers stay one line. */
+#ftf-measure {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 860;
+  pointer-events: none; opacity: 0; transition: opacity 360ms ease;
+}
+#ftf-measure.ftf-in { opacity: 1; }
+.ftf-m-glow, .ftf-m-core { fill: none; stroke-linecap: round; stroke-dasharray: 0.1 16; }
+.ftf-m-glow { stroke: #FFB524; stroke-width: 11; opacity: .55; filter: blur(3px); }
+.ftf-m-core { stroke: #FFFBE9; stroke-width: 4.5;
+  filter: drop-shadow(0 0 4px rgba(255, 198, 74, .9)); }
+.ftf-m-dot  { fill: #FFD65C; stroke: #8A5A1C; stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(255, 198, 74, .9)); }
+/* The dots march slowly along the line - measurement in progress, not a
+   static border. Off under reduced motion. */
+@keyframes ftf-m-march { to { stroke-dashoffset: -32.2; } }
+#ftf-measure.ftf-in .ftf-m-glow,
+#ftf-measure.ftf-in .ftf-m-core { animation: ftf-m-march 1.7s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  #ftf-measure.ftf-in .ftf-m-glow,
+  #ftf-measure.ftf-in .ftf-m-core { animation: none; }
+}
+
+/* The cards sit centred ON their measurement line. */
+#ftf-dim-w, #ftf-dim-h { transform: translate(-50%, -50%); }
 .ftf-dim {
   position: absolute; left: 0; top: 0; z-index: 880; opacity: 0;
   transition: opacity 300ms ease; white-space: nowrap;
@@ -194,6 +221,34 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   background: url('../assets/art/touch.png') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(-3px 6px 8px rgba(24, 52, 12, .5));
 }
+
+/* ------------------------------------------------ the tutorial veil -----
+   A dim wash over the whole stage. Whatever carries the .ftf-lit class is
+   raised above it, so the intro can point at the fence, then at the grass,
+   with everything else quietly stepped back. The sign always stays lit - it
+   is doing the pointing. */
+#ftf-veil {
+  position: absolute; inset: 0; z-index: 1010; pointer-events: none;
+  background: rgba(18, 38, 8, .52);
+  opacity: 0; transition: opacity 420ms ease;
+}
+#ftf-veil.ftf-in { opacity: 1; }
+/* Lifted above the veil. Every target is already absolutely positioned, so a
+   z boost is the whole trick. Raising the field lifts fence, fill and goat
+   together, which is exactly right when the fence is the subject. */
+.ftf-lit { z-index: 1020 !important; }
+/* While the AREA is the subject, the fence steps back: the lifted field would
+   otherwise bring the fence up with it at full strength, and two loud things
+   defeat the pointing. */
+#ftf-modules { transition: opacity 420ms ease; }
+#ftf-modules.ftf-fade { opacity: .3; }
+
+/* The subject card gets one gentle beacon while it is being introduced. */
+@keyframes ftf-beacon {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+.ftf-beacon { animation: ftf-beacon 1100ms ease-in-out 2; }
 
 /* ------------------------------------------ the live explanation --------
    One screen the student operates. The pasture keeps the left, the curve keeps
@@ -426,14 +481,31 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 .ftf-p-rect  { border-radius: 2px; transform: translate(-50%, -50%); }
 .ftf-p-dot   { border-radius: 50%; transform: translate(-50%, -50%); }
 .ftf-p-dia   { border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg); }
+/* A four-point star, not a dot: at celebration distance a plain dot reads as
+   noise. Bigger core, harder glow - it has to carry against bright grass. */
 .ftf-p-spark {
-  border-radius: 50%; background: #FFF6C9; transform: translate(-50%, -50%);
-  box-shadow: 0 0 12px 4px rgba(255, 203, 74, .8);
+  background: radial-gradient(circle, #FFFFFF 0%, #FFF0B8 45%, rgba(255, 214, 92, 0) 72%);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 18px 7px rgba(255, 203, 74, .9);
+  clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
 }
+/* Bigger than she is, so it reads as a shockwave passing OUT of her rather
+   than a hoop hidden behind her body - which is why the old 240px ring was
+   never visible. */
+/* A shockwave, not a hairline: on bright grass a 4px outline at 95% alpha
+   still disappeared. Thick, warm and double-glowed so it reads at a glance. */
 .ftf-p-ring {
-  width: 240px; height: 240px; border-radius: 50%;
-  border: 3px solid rgba(255, 246, 201, .9);
+  width: 540px; height: 540px; border-radius: 50%;
+  border: 9px solid rgba(255, 250, 222, .98);
+  box-shadow: 0 0 34px 10px rgba(255, 190, 50, .75),
+              inset 0 0 30px 8px rgba(255, 190, 50, .6);
   transform: translate(-50%, -50%); opacity: 0;
+}
+/* A blade of grass for the shower - the celebration falls as confetti AND
+   grass, which ties it to the field she just won. */
+.ftf-p-blade {
+  border-radius: 45% 45% 20% 20%;
+  transform: translate(-50%, -50%);
 }
 .ftf-p-dust {
   border-radius: 50%; transform: translate(-50%, -50%);
@@ -849,7 +921,9 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
   padding: 0; z-index: 1000; opacity: 0; pointer-events: none;
 }
 /* During a recap it sits in the gap between the two builds. */
-#ftf-next.ftf-mid { right: auto; left: 50%; margin-left: -112px; top: 648px; }
+/* Between the two builds, with clear air below - a button resting on the
+   frame edge reads as clipped, not placed. */
+#ftf-next.ftf-mid { right: auto; left: 50%; margin-left: -112px; top: 630px; }
 
 /* ================================================== SCREEN 1 · TITLE === */
 #ftf-title { position: absolute; inset: 0; z-index: 260; pointer-events: none; }

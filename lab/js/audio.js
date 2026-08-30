@@ -256,6 +256,9 @@ Object.assign(FenceTheFarm.prototype, {
       case 'challenge_flip':     this.rasp(700, 200, 0.24, 0.10, 2); this.after(230, () => this.wood(260, 0.12, 0.2, 2)); break;
       case 'success_chord':      [523, 659, 784].forEach((f, i) => this.after(i * 100, () => this.pluck(f, 0.15, 0.8))); break;
       case 'chime':              [659, 880].forEach((f, i) => this.after(i * 90, () => this.pluck(f, 0.10, 0.5))); break;
+      /* Arriving at a new farm: a soft airy sweep as the light changes, before
+         a single post has risen. It marks the change of place, not a success. */
+      case 'farm_turn':          this.rasp(220 * v, 760 * v, 0.55, 0.05, 0.8); this.after(340, () => this.pluck(392 * v, 0.07, 0.9)); break;
       /* The sign finishing its sentence. Deliberately near the threshold of
          hearing: one tick per completed instruction, never per word. */
       case 'plank_tick':         this.wood(760 * v, 0.035, 0.05, 3.2); break;

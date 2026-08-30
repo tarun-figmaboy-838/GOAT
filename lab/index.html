@@ -42,6 +42,21 @@
         <rect id="ftf-trace-b" class="ftf-trace-hi" x="0" y="0" width="0" height="0" pathLength="100"></rect>
       </svg>
 
+      <!-- The measurement lines. When the side lengths are revealed, a dotted
+           golden line runs the length of each measured side with its number
+           card sitting on it - so "8 m" is visibly THE BOTTOM EDGE, not a
+           number floating near the fence. Hidden and shown with the cards. -->
+      <svg id="ftf-measure" viewBox="0 0 1280 720" aria-hidden="true">
+        <line id="ftf-mL-gl" class="ftf-m-glow"></line>
+        <line id="ftf-mW-gl" class="ftf-m-glow"></line>
+        <line id="ftf-mL" class="ftf-m-core"></line>
+        <line id="ftf-mW" class="ftf-m-core"></line>
+        <circle id="ftf-mL-a" class="ftf-m-dot" r="6"></circle>
+        <circle id="ftf-mL-b" class="ftf-m-dot" r="6"></circle>
+        <circle id="ftf-mW-a" class="ftf-m-dot" r="6"></circle>
+        <circle id="ftf-mW-b" class="ftf-m-dot" r="6"></circle>
+      </svg>
+
       <!-- Ambient farm life: cloud shadows drifting over the grass, and two
            butterflies working the corners. Nothing is drawn ON the grass -
            earlier tufts and pollen read as shapes stuck on the texture rather
@@ -79,6 +94,12 @@
         <span id="ftf-ring"></span>
       </button>
     </div>
+
+    <!-- The tutorial veil. During the guided intro the stage dims and ONE thing
+         at a time is lifted above it - the fence and its card, then the grass
+         and its card - so "perimeter" and "area" are each pointed at, in the
+         real interface, before the student is asked to touch anything. -->
+    <div id="ftf-veil" aria-hidden="true"></div>
 
     <!-- ================= HUD ================= -->
 
@@ -337,6 +358,8 @@
     <!-- String source for keys with no permanent home in the markup. -->
     <div id="ftf-strings">
       <span data-i18n="tut.reason">Give her more grass</span>
+      <span data-i18n="tut.per">Your fence — 20 m around the outside</span>
+      <span data-i18n="tut.area">The grass inside is the area</span>
       <span data-i18n="tut.touch">Drag this corner</span>
       <span data-i18n="tut.noticed">More grass — still 20 m</span>
       <span data-i18n="tut.more">Can you give her even more?</span>

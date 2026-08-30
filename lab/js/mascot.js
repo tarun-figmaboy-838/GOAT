@@ -25,10 +25,10 @@ const CELEBRATION_CONFIG = {
   landingSquash: 240,
   particleCount: 22,
   sparkleCount: 7,
-  showerCount: 46,         // falling confetti, spread over the back half
+  showerCount: 72,         // falling confetti, spread over the back half
   showerSpread: 4200,      // spawned in waves across this long, never at once
   ringDuration: 760,
-  crossfade: 140,          // pose-to-pose dissolve
+  crossfade: 100,          // pose-to-pose dissolve; longer ghosts, shorter pops
   rollChance: 1 / 7,       // how often the playful tumble replaces the ending
   idleBreath: 5200
 };
@@ -163,6 +163,10 @@ class GoatMascotController {
       this.shower(C.showerCount, C.showerSpread);
     });
     this.at(1400, () => { this.setPose('bigCheer'); this.g.sfx('bell_ding'); });
+    // She never freezes mid-air: the peak is a slow float, not a held frame.
+    // A wrapper that stops moving for 300ms is the single thing that makes a
+    // recording of this look stuttery.
+    this.at(1580, () => this.move(-H - 6, 1.01, 1.02, 0, 330, 'cubic-bezier(.45,.05,.55,.95)'));
     this.at(1650, () => this.sparkles(C.sparkleCount));
     this.at(1900, () => this.move(-H - 4, 1, 1.02, -2, 300, 'cubic-bezier(.4,0,.6,1)'));
 
@@ -171,6 +175,8 @@ class GoatMascotController {
     this.at(2620, () => { this.move(0, 1.07, 0.91, 0, 120, 'cubic-bezier(.3,0,.2,1)'); this.dust(); this.g.sfx('cheer_land'); });
     this.at(2740, () => this.move(0, 0.97, 1.05, 0, 150, BACK));
     this.at(2890, () => { this.setPose('wink'); this.move(0, 1, 1, 0, 160); });
+    // A gentle sway bridges the wink and the second hop - again, no dead air.
+    this.at(3060, () => this.move(0, 1.01, 0.99, 1.5, 340, 'cubic-bezier(.45,.05,.55,.95)'));
 
     /* ---- 3.4-4.8  a second, smaller hop - pure delight --------------- */
     this.at(3400, () => { this.setPose('hop'); this.move(-26, 1, 1.03, -2, 260, OUT); });
@@ -258,9 +264,13 @@ class GoatMascotController {
         'background:' + cols[i % cols.length] + ';' +
         'opacity:' + (front ? 1 : .6) + ';';
       (front ? this.front : this.back).appendChild(d);
-      // Up and out of the chest, then gravity takes it.
-      const a = (190 + Math.random() * 160) * Math.PI / 180;
-      const dist = 50 + Math.random() * 100;
+      /* Up and out of the chest, then gravity takes it. The cone SKIPS the
+         section that would cross her face: front particles fan to her left or
+         right, and only the behind-layer ones may pass overhead. */
+      const side = i % 2 ? [190, 245] : [295, 350];
+      const span = front ? side : [220, 320];
+      const a = (span[0] + Math.random() * (span[1] - span[0])) * Math.PI / 180;
+      const dist = (front ? 90 : 60) + Math.random() * 110;
       const vx = Math.cos(a) * dist, vy = Math.sin(a) * dist;
       const life = 700 + Math.random() * 600;
       d.animate([
@@ -275,14 +285,18 @@ class GoatMascotController {
     const N = this.budget(n);
     for (let i = 0; i < N; i++) {
       const d = document.createElement('i');
-      const s = 8 + Math.random() * 7;
-      // Around the horns, raised hooves and tail - never across her face.
-      const a = (-160 + (i / N) * 200) * Math.PI / 180;
-      const r = 88 + Math.random() * 46;
+      const s = 12 + Math.random() * 9;
+      /* OUTSIDE her silhouette, always. She fills roughly a 210px half-width
+         from the anchor, so the ring of sparkles starts well beyond that -
+         they frame her rather than sitting on her face, which is also what
+         makes them readable: a pale dot on white fur is invisible, the same
+         dot on grass glows. */
+      const a = (-172 + (i / N) * 214) * Math.PI / 180;
+      const r = 290 + Math.random() * 70;     // x0.82 vertical squash still clears her ~210px half-width
       d.className = 'ftf-part ftf-p-spark';
       d.style.cssText = 'width:' + s + 'px;height:' + s + 'px;' +
-        'margin-left:' + (Math.cos(a) * r) + 'px;margin-top:' + (Math.sin(a) * r * .8) + 'px;' +
-        'animation:ftf-spark ' + (420 + Math.random() * 260) + 'ms ' + (i * 45) + 'ms ease-out both;';
+        'margin-left:' + (Math.cos(a) * r) + 'px;margin-top:' + (Math.sin(a) * r * .82) + 'px;' +
+        'animation:ftf-spark ' + (460 + Math.random() * 280) + 'ms ' + (i * 55) + 'ms ease-out both;';
       this.front.appendChild(d);
     }
   }
@@ -296,18 +310,24 @@ class GoatMascotController {
     if (this.g.noMotion()) return;
     const N = this.budget(total);
     const cols = ['#FFCA4A', '#FF9E2C', '#9BE3F0', '#8FD65B', '#FFF6E0', '#FF7A9C'];
+    const greens = ['#8FD65B', '#6FBF33', '#B8E86A'];
     const waves = 8, per = Math.ceil(N / waves);
     for (let w = 0; w < waves; w++) {
       this.at(w * (spread / waves), () => {
         for (let i = 0; i < per; i++) {
           const d = document.createElement('i');
-          const s = 7 + Math.random() * 9;
-          const tall = Math.random() < .45;
+          // A third of the shower is grass: thin green blades tumbling among
+          // the confetti, so the celebration is made of the field she won.
+          const blade = (w + i) % 3 === 0;
+          const s = blade ? 3.5 + Math.random() * 2 : 7 + Math.random() * 9;
+          const tall = blade || Math.random() < .45;
           // Placed against the stage, not the mascot, so it crosses the sky.
           const x = -620 + Math.random() * 1240;
-          d.className = 'ftf-part ' + (Math.random() < .5 ? 'ftf-p-rect' : 'ftf-p-dia');
-          d.style.cssText = 'width:' + s + 'px;height:' + (tall ? s * 1.9 : s) + 'px;' +
-            'background:' + cols[(w + i) % cols.length] + ';' +
+          d.className = 'ftf-part ' + (blade ? 'ftf-p-blade' : (Math.random() < .5 ? 'ftf-p-rect' : 'ftf-p-dia'));
+          d.style.cssText = 'width:' + s + 'px;height:' + (blade ? s * 4.6 : (tall ? s * 1.9 : s)) + 'px;' +
+            'background:linear-gradient(180deg,' +
+              (blade ? greens[(w + i) % greens.length] + ',' + greens[(w + i + 1) % greens.length]
+                     : cols[(w + i) % cols.length] + ',' + cols[(w + i) % cols.length]) + ');' +
             'margin-left:' + x + 'px;margin-top:-460px;opacity:.9;';
           this.back.appendChild(d);
           const drift = -70 + Math.random() * 140;

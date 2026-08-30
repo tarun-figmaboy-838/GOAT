@@ -98,9 +98,11 @@ Object.assign(FenceTheFarm.prototype, {
     },
     rate: { enter: 0.10, walk: 0.115, eat: 0.30, talk: 0.16, happy: 0.17 }
   },
-  /* Seconds for the camera to come overhead. Long enough to read as a tilt,
-     short enough that it is over before the first fence is finished. */
-  TILT: 0.62,
+  /* Seconds for the camera to come overhead. Slow enough that the player SEES
+     her change from the portrait to the plan view while she walks - the
+     crossover is the transition, so it must be watchable, not subliminal. It
+     still finishes before the first fence post rises. */
+  TILT: 1.05,
   BLEAT_PEAK: 2,                       // the widest mouth in the bleat sheet
   GOAT_METRES: 1.30,                   // nose to rump
   /* Phases where she is free to wander; elsewhere the game is scripting her. */
@@ -482,9 +484,14 @@ class GoatController {
     G.y += Math.sin(rad) * this.speed * dt;
 
     // She is walking, so she must not be able to walk out: clamp every frame
-    // against the live safe area, not just when the pen changes.
-    G.x = Math.max(this.b[0], Math.min(this.b[1], G.x));
-    G.y = Math.max(this.b[2], Math.min(this.b[3], G.y));
+    // against the live safe area - EXCEPT while she is walking on. The whole
+    // point of the entrance is that she starts where the title left her, which
+    // is outside the pen; clamping her then snapped her to the pen edge and
+    // made her appear from nowhere instead of walking in from the banner.
+    if (G.state !== 'enter') {
+      G.x = Math.max(this.b[0], Math.min(this.b[1], G.x));
+      G.y = Math.max(this.b[2], Math.min(this.b[3], G.y));
+    }
   }
   arrive() {
     const G = this.G, g = this.game;

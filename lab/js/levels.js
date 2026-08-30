@@ -27,6 +27,7 @@ Object.assign(FenceTheFarm.prototype, {
       tutBeat: 0, tutMoves: 0, tutNoticed: false
     };
     this.closeChoice();
+    this.spotlight(null);       // a new farm never inherits the intro's veil
   },
 
   /* Called once she has walked in (first farm) or is standing ready. */
@@ -130,13 +131,60 @@ Object.assign(FenceTheFarm.prototype, {
     this.after(this.noMotion() ? 0 : 2100, () => this.tutBeat(2));
   },
 
-  /* Beat 2 — the fence is a limited, fixed amount. It pulses once. */
+  /* Beat 2 — the fence is built, then the interface is INTRODUCED: the stage
+     dims and the two ideas the whole game runs on are pointed at, one at a
+     time, in the real UI. Perimeter first - the tracer walks the fence while
+     its card is lit - then area, with the grass and its card lit. Only after
+     both does the corner get taught. Skipping remains available throughout. */
   tut2() {
     this.buildFence(1150, () => {
       this.showNumbers(true);
-      this.vo('vo.fence');
       if (this.tutorialSeen()) this.el.skip.classList.add('ftf-in');
-      this.after(this.noMotion() ? 0 : 1250, () => { this.beginPlay(); this.tutBeat(3); });
+      this.after(this.noMotion() ? 200 : 900, () => this.tutIntroFence());
+    });
+  },
+  /* "This is your fence." The field and the fence card lift out of the dim,
+     and the measuring light walks the perimeter while the player watches. */
+  tutIntroFence() {
+    if (this.lv.tutBeat !== 2) return;
+    this.spotlight(['field', 'trace', 'fence-badge']);
+    this.el['fence-badge'].classList.add('ftf-beacon');
+    this.plankSay(this.t('tut.per').replace('20', String(this.g.perimeter)));
+    this.vo('vo.fence');
+    const g = this.g;
+    this.after(this.noMotion() ? 0 : 700, () => {
+      this.finaleTraceOne('trace-a', this.pens.main, g.L, g.W, 1600);
+    });
+    this.after(this.noMotion() ? 900 : 3300, () => this.tutIntroArea());
+  },
+  /* "The grass inside is the area." The fill sweeps once while its card is
+     lit; the fence drops back into the dim so only one idea is on stage. */
+  tutIntroArea() {
+    if (this.lv.tutBeat !== 2) return;
+    this.el.trace.style.opacity = '0';
+    this.spotlight(['field', 'area-card']);
+    // The fence steps back while the inside is the subject.
+    this.el.modules.classList.add('ftf-fade');
+    this.el['area-card'].classList.add('ftf-beacon');
+    this.plankSay(this.t('tut.area'));
+    this.vo('vo.area');
+    this.sfx('area_up');
+    /* The interior has to actually LIGHT UP: the fill is lifted above the veil
+       but the grass texture underneath it is not, so at its usual 22% tint the
+       inside still reads dim. It is held bright for the whole beat - the
+       subject of this beat is the inside - and eased back only when the veil
+       lifts and render() restores the colour play actually uses. */
+    const f = this.el.fill;
+    f.style.transition = this.noMotion() ? 'none' : 'background 500ms ease';
+    this.after(this.noMotion() ? 0 : 60, () => { f.style.background = 'rgba(168,236,96,.66)'; });
+    this.after(this.noMotion() ? 900 : 3000, () => {
+      if (this.lv.tutBeat !== 2) return;
+      this.spotlight(null);
+      this.el.modules.classList.remove('ftf-fade');
+      f.style.transition = 'background 900ms ease';
+      this.render({ instant: true });
+      this.beginPlay();
+      this.tutBeat(3);
     });
   },
 
@@ -192,7 +240,7 @@ Object.assign(FenceTheFarm.prototype, {
     this.vo('vo.nice');
     // Hold on the finished pasture so the revealed side lengths can be read
     // before the recap replaces them with its own cards.
-    this.after(this.noMotion() ? 0 : 2100, () => this.tutBeat(9));
+    this.after(this.noMotion() ? 0 : 3800, () => this.tutBeat(9));
   },
 
   /* Beat 9 - the recap: the shape they started with is rebuilt beside the
@@ -257,6 +305,9 @@ Object.assign(FenceTheFarm.prototype, {
     this.el.skip.classList.remove('ftf-in');
     this.hideHint();
     this.clearTimers();
+    // Skipping mid-intro must put the lights back on.
+    this.spotlight(null);
+    this.el.trace.style.opacity = '0';
     if (this.stats.phase !== 'play') {
       this.buildFence(0, () => { this.showNumbers(false); this.beginPlay(); this.tutBeat(7); });
     } else this.tutBeat(7);
@@ -265,12 +316,7 @@ Object.assign(FenceTheFarm.prototype, {
   /* ==========================================================================
      LEVEL 2 · FARM RECORD — beat 32 m², then see how far it goes
      ====================================================================== */
-  recordIntro() {
-    this.buildFence(700, () => {
-      this.showNumbers(false);
-      this.after(this.noMotion() ? 0 : 200, () => this.beginPlay());
-    });
-  },
+  recordIntro() { this.farmIntro(); },
   recordBegin() {
     // No separate board: the challenge, the number and the result all speak
     // through the one sign, so nothing crowds the middle of the screen.
@@ -325,7 +371,8 @@ Object.assign(FenceTheFarm.prototype, {
     this.after(620, () => this.plankSay(this.t("success.r2")));
     // Then the same recap every farm ends with - after a beat on the side
     // lengths this farm just revealed.
-    this.after(2400, () => {
+    // Long enough to actually READ the revealed measurements before the recap.
+    this.after(5200, () => {
       const r = this.round(), g = this.g;
       this.compareBuilds(r.start, [g.L, g.W], g.perimeter, { then: () => this.offerNext("action.next") });
     });
@@ -335,12 +382,7 @@ Object.assign(FenceTheFarm.prototype, {
      LEVEL 3 · VISUAL TRAP — the game asks the player to perform the
      misconception, then shows them what it cost.
      ====================================================================== */
-  trapIntro() {
-    this.buildFence(700, () => {
-      this.showNumbers(false);
-      this.after(this.noMotion() ? 0 : 200, () => this.beginPlay());
-    });
-  },
+  trapIntro() { this.farmIntro(); },
   trapBegin() {
     // She walks the long axis: the pasture is meant to look substantial.
     const b = this.bounds();
@@ -399,7 +441,8 @@ Object.assign(FenceTheFarm.prototype, {
     // Close the loop on the prediction they committed to before the experiment.
     const verdict = this.predictVerdict();
     if (verdict) this.after(1500, () => this.showBanner(verdict, 1800));
-    this.after(2400, () => {
+    // Long enough to actually READ the revealed measurements before the recap.
+    this.after(5200, () => {
       this.compareBuilds([L2, W2], [g.L, g.W], g.perimeter, {
         tagA: "final.longest", tagB: "final.bestBuild",
         then: () => this.offerNext("action.next")
@@ -411,10 +454,21 @@ Object.assign(FenceTheFarm.prototype, {
      LEVEL 4 · MASTER BUILDER — no instruction, no record, no target.
      Feedback arrives as sound and as the goat, never as text.
      ====================================================================== */
-  masteryIntro() {
-    this.buildFence(700, () => {
-      this.showNumbers(false);
-      this.after(this.noMotion() ? 0 : 200, () => this.beginPlay());
+  masteryIntro() { this.farmIntro(); },
+  /* One rhythm for every farm arrival, step by step rather than a cut:
+     the new light settles over the empty grass, THEN the fence builds, THEN
+     the numbers arrive, and only then does play begin and the sign speak.
+     Each beat gets its own moment - that is what makes a farm change read as
+     arriving somewhere new instead of as the screen being swapped. */
+  farmIntro() {
+    this.sfx('farm_turn');
+    this.after(this.noMotion() ? 0 : 620, () => {
+      this.buildFence(950, () => {
+        this.after(this.noMotion() ? 0 : 380, () => {
+          this.showNumbers(false);
+          this.after(this.noMotion() ? 0 : 650, () => this.beginPlay());
+        });
+      });
     });
   },
   masteryBegin() {

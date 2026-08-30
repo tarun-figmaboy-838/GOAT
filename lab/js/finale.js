@@ -36,7 +36,10 @@ Object.assign(FenceTheFarm.prototype, {
        Giving the depth the room that was going to waste anyway makes both pens
        about a quarter bigger, which is the whole point of this screen - the two
        areas have to be worth comparing by eye. */
-    const GAP = 140, SPAN = 1200, GROUND = 482, DEPTH = 336;
+    /* GAP is what makes the middle read as a PLACE: the way-on button lives
+       between the two builds, so the gap has to be wide enough that the button
+       sits in clear grass rather than squeezed between the cards. */
+    const GAP = 220, SPAN = 1200, GROUND = 482, DEPTH = 336;
     const cell = Math.min((SPAN - GAP) / (A[0] + B[0]), DEPTH / Math.max(A[1], B[1]));
     const wA = A[0] * cell, wB = B[0] * cell;
     const ax = (1280 - (wA + GAP + wB)) / 2;
