@@ -44,8 +44,16 @@ directory.
 
 It is a redirect and not a rewrite on purpose: every asset, script and
 stylesheet path inside the game is relative, so the browser has to actually be
-at `/lab` for them to resolve. A rewrite would leave the URL at `/` and every
+at `/lab/` for them to resolve. A rewrite would leave the URL at `/` and every
 one of them would 404.
+
+> **`trailingSlash` must stay `true`, and the redirect must end in a slash.**
+> A relative path resolves against the *directory* of the current URL. At
+> `/lab` — no slash — the browser thinks the directory is `/`, so `js/game.js`
+> becomes `/js/game.js`, which 404s to an HTML page; `nosniff` then refuses to
+> execute HTML as JavaScript and every script on the page dies silently. The
+> result is a blank white screen with no console error a reader would
+> recognise. At `/lab/` it resolves to `/lab/js/game.js` and the game runs.
 
 ### Or just connect the repo
 
