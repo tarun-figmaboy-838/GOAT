@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/", "destination": "/lab", "permanent": false }
+  ],
   "headers": [
     {
       "source": "/:app(game|lab)/assets/:path*",

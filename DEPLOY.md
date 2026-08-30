@@ -4,10 +4,10 @@ Static site, no build step. Vercel serves the repo root.
 
 ```
 /
-  index.html          launcher: Play / Earlier build
-  lab/                THE game — this is what "Play" opens and what people see
+  lab/                THE game — / redirects here, and this is what people see
   game/               the earlier side-view build, kept for reference
-  vercel.json         cleanUrls + cache headers
+  menu.html           the chooser, at /menu — no longer the front door
+  vercel.json         / -> /lab, cleanUrls, cache headers
   .vercelignore       keeps ~7 MB of source art out of the bundle
   scripts/
     reset-lab.ps1     throw away /lab and copy /game over it — see the warning
@@ -33,8 +33,19 @@ vercel --prod     # production
 ```
 
 No project settings needed — no framework, no build command, no output
-directory. Vercel serves the root, so `/` is the launcher, `/lab` is the game
-and `/game` is the earlier build.
+directory.
+
+| URL | what it serves |
+| --- | --- |
+| `/` | redirects to `/lab` — opening the site opens the game |
+| `/lab` | the game |
+| `/game` | the earlier side-view build |
+| `/menu` | the chooser, if you want to pick |
+
+It is a redirect and not a rewrite on purpose: every asset, script and
+stylesheet path inside the game is relative, so the browser has to actually be
+at `/lab` for them to resolve. A rewrite would leave the URL at `/` and every
+one of them would 404.
 
 ### Or just connect the repo
 
@@ -62,6 +73,13 @@ When you want a clean slate:
 `.vercelignore` drops the art the game never loads: the originals the derived
 assets were cut from, and the PLAY sprite the CSS buttons replaced. That's ~7 MB
 per copy. The files stay in the repo so assets can be recut.
+
+> **Anchor any directory pattern with a leading slash.** This file uses
+> `.gitignore` syntax, where a bare `assets/` matches a directory of that name
+> at *any* depth. The rule meant for the loose source art at the repo root was
+> written that way, so it silently excluded `game/assets/` and `lab/assets/` as
+> well — 77 files, 51.6 MB, every image and sound in both games. The deploy
+> rendered as a flat green page with no art at all. It is `/assets/` now.
 
 | skipped | why |
 | --- | --- |
