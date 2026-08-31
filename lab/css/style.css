@@ -9,7 +9,16 @@
 @font-face { font-family: 'Osmose'; font-style: normal; font-weight: 700; font-display: swap;
   src: url('../assets/fonts/Osmose-Bold.otf') format('opentype'); }
 
-html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
+/* The canvas is locked. touch-action and overscroll-behavior were set on the
+   stage but not on what surrounds it, so the letterbox bars were still live
+   browser surface: a pinch there zoomed the whole page out of its fit, and a
+   downward drag triggered pull-to-refresh mid-game. Neither gesture means
+   anything here, and both broke the one thing a fixed canvas promises. */
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #1f3a0d; overflow: hidden;
+  touch-action: none; overscroll-behavior: none;
+}
 
 :root {
   --wood-lo: #7C4F26;  --wood-hi: #A0703C;  --wood-edge: #543518;  --wood-deep: #452A12;
@@ -27,6 +36,7 @@ html, body { margin: 0; padding: 0; background: #1f3a0d; overflow: hidden; }
 /* ---------------------------------------------------------------- shell --- */
 #ftf-root {
   position: fixed; inset: 0; overflow: hidden;
+  touch-action: none; overscroll-behavior: none;
   background: #7AB92C; display: flex; align-items: center; justify-content: center;
   font-family: 'Nunito Sans', 'Segoe UI', sans-serif;
 }

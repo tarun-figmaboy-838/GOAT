@@ -114,8 +114,16 @@ class FenceTheFarm {
 
     this.initStrings();
     this.fit();
-    this._onResize = () => this.fit();
+    /* Rotating a phone fires resize before the new dimensions have settled, so
+       the fit is repeated on the next frame; and a toolbar sliding in or out
+       moves the visual viewport without firing a window resize at all. */
+    this._onResize = () => { this.fit(); requestAnimationFrame(() => this.fit()); };
     window.addEventListener('resize', this._onResize);
+    window.addEventListener('orientationchange', this._onResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this._onResize);
+      window.visualViewport.addEventListener('scroll', this._onResize);
+    }
     this.bindInput();
     this.prepareGoatAudio();
     this.preload();
@@ -131,6 +139,11 @@ class FenceTheFarm {
   destroy() {
     this.dead = true;
     window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('orientationchange', this._onResize);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this._onResize);
+      window.visualViewport.removeEventListener('scroll', this._onResize);
+    }
     if (this._key) window.removeEventListener('keydown', this._key);
     cancelAnimationFrame(this.raf);
     this.clearTimers();
@@ -143,7 +156,22 @@ class FenceTheFarm {
   }
 
   /* ---------------------------------------------------------------- infra -- */
-  fit() { this.root.style.transform = 'scale(' + Math.min(window.innerWidth / 1280, window.innerHeight / 720) + ')'; }
+  /* The stage is a fixed 1280 x 720 that is scaled to fit and letterboxed,
+     never reflowed, so every position in the game can stay in design pixels.
+
+     What it fits INTO is the visual viewport wherever the browser offers one.
+     On a phone window.innerHeight includes the strip hidden under a collapsing
+     address bar, so fitting to it puts the bottom of the stage behind the
+     toolbar - and then jumps the moment that bar slides away. visualViewport
+     reports the region actually on screen, which is the one to fill. */
+  viewSize() {
+    const v = window.visualViewport;
+    return v ? [v.width, v.height] : [window.innerWidth, window.innerHeight];
+  }
+  fit() {
+    const s = this.viewSize();
+    this.root.style.transform = 'scale(' + Math.min(s[0] / 1280, s[1] / 720) + ')';
+  }
   after(ms, fn) { const t = setTimeout(() => { if (!this.dead) fn(); }, ms); this.timers.push(t); return t; }
   clearTimers() {
     this.timers.forEach(t => { clearTimeout(t); clearInterval(t); }); this.timers = [];
