@@ -34,8 +34,7 @@ const HERD = {
   paceMin: 0.72, paceMax: 0.95,      // fraction of her walking speed
   idleMin: 2.4, idleMax: 6.0,        // seconds
   eatMin: 2.2, eatMax: 4.5,
-  weights: { walk: 0.42, eat: 0.44, idle: 0.14 },
-  z: 298                             // just under her 300: never in front of her
+  weights: { walk: 0.42, eat: 0.44, idle: 0.14 }
 };
 
 class HerdGoat {

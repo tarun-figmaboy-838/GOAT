@@ -22,16 +22,13 @@
 const CELEBRATION_CONFIG = {
   duration: 5000,          // the whole performance, start to still
   jumpHeight: 52,          // px at the design scale; scaled down on small stages
-  peakHold: 240,
-  landingSquash: 240,
   particleCount: 22,
   sparkleCount: 7,
   showerCount: 56,         // falling confetti, spread across the performance
   showerSpread: 2600,      // spawned in waves across this long, never at once
   ringDuration: 760,
   crossfade: 150,          // pose-to-pose dissolve; longer ghosts, shorter pops
-  rollChance: 1 / 7,       // how often the playful tumble replaces the ending
-  idleBreath: 5200
+  rollChance: 1 / 7        // how often the playful tumble replaces the ending
 };
 
 /* src is the supplied file, untouched. `ground` is the measured fraction of the
@@ -211,31 +208,7 @@ class GoatMascotController {
     this.at(C.duration, () => this.finish(then));
   }
 
-  /* A quick, cheap reaction for an ordinary correct move. */
-  playCorrect() {
-    if (this.busy) return;
-    this.busy = true; this.clear();
-    if (this.g.noMotion()) { this.setPose('cheer'); this.at(600, () => this.finish()); return; }
-    this.at(60,  () => this.move(0, 1.05, 0.95, 0, 90));
-    this.at(160, () => { this.setPose('hop'); this.move(-22, 1, 1.03, -2, 200, 'cubic-bezier(.15,.8,.3,1)'); });
-    this.at(320, () => this.sparkles(5));
-    this.at(430, () => this.move(0, 1.04, 0.96, 0, 160, 'cubic-bezier(.5,0,.85,.5)'));
-    this.at(560, () => { this.setPose('wink'); this.move(0, 1, 1, 0, 140); });
-    this.at(880, () => { this.setPose('idle'); this.finish(); });
-  }
 
-  /* Never a punishment: curious, not disappointed. */
-  playWrong() {
-    if (this.busy) return;
-    this.busy = true; this.clear();
-    this.setPose('look');
-    if (this.g.noMotion()) { this.at(500, () => this.finish()); return; }
-    this.at(40,  () => this.move(0, 1, 1, -4, 150));
-    this.at(220, () => this.move(0, 1, 1, 4, 180));
-    this.at(420, () => this.move(-6, 1, 1, 0, 160));
-    this.at(600, () => { this.setPose('idle'); this.rest(); });
-    this.at(800, () => this.finish());
-  }
 
   finish(then) {
     this.busy = false;

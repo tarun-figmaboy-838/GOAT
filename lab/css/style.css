@@ -349,7 +349,6 @@ html, body {
    a feature. So everything here is slow (16-90 second cycles), faint, and
    drawn UNDER the fence. Nothing is ever created at runtime.               */
 #ftf-amb  { position: absolute; inset: 0; z-index: 118; pointer-events: none; overflow: hidden; }
-#ftf-flit { position: absolute; inset: 0; z-index: 262; pointer-events: none; overflow: hidden; }
 
 /* Cloud shadows. Two enormous soft ellipses at very low opacity, crossing on
    different periods so their overlap never repeats in a noticeable way. This
@@ -372,79 +371,10 @@ html, body {
 /* Light tips over darker bases: the contrast is what makes a blade read as a
    blade against grass of a similar green. */
 
-
-/* Butterflies. These fly ABOVE the fence, because from overhead that is where
-   a butterfly is - so they are the one ambient thing allowed over the pasture.
-   Kept small, pale and on long looping paths through the corners. */
-/* Drawn as cartoon game art, not as a minimal glyph: chunky wings with a dark
-   outline and a highlight spot, a proper body with a head, and a soft shadow -
-   so at 28px it still reads as a butterfly and belongs to the same illustrated
-   world as the fence and the goat. */
-.ftf-fly {
-  position: absolute; width: 28px; height: 22px;
-  will-change: transform;
-  filter: drop-shadow(0 3px 3px rgba(24, 52, 12, .34));
-}
-/* Body and head, sitting between the wings. */
-.ftf-fly::before {
-  content: ''; position: absolute; left: 12px; top: 4px; width: 4px; height: 15px;
-  border-radius: 2px; background: linear-gradient(180deg, #7A5322, #4E3312);
-  box-shadow: 0 0 0 1.5px rgba(48, 30, 10, .55);
-  z-index: 2;
-}
-.ftf-fly::after {
-  content: ''; position: absolute; left: 11.5px; top: 0; width: 5px; height: 5px;
-  border-radius: 50%; background: #4E3312;
-  box-shadow: 0 0 0 1.5px rgba(48, 30, 10, .5);
-  z-index: 2;
-}
-.ftf-fly b {
-  position: absolute; top: 1px; width: 13px; height: 20px;
-  border: 2px solid #B4741C;
-  background: radial-gradient(circle at 62% 32%, #FFFBE4 0%, #FFD65C 42%, #F79A2B 100%);
-  animation: ftf-wing .32s ease-in-out infinite;
-}
-/* A spot on each wing - the detail that makes it cartoon rather than abstract. */
-.ftf-fly b::after {
-  content: ''; position: absolute; top: 5px; width: 4px; height: 4px;
-  border-radius: 50%; background: rgba(150, 82, 12, .75);
-}
-.ftf-fly b:first-child {
-  left: 0; transform-origin: 100% 50%;
-  border-radius: 78% 30% 60% 26%;
-}
-.ftf-fly b:first-child::after { right: 4px; }
-.ftf-fly b:last-child {
-  right: 0; transform-origin: 0% 50%; animation-delay: -.16s;
-  border-radius: 30% 78% 26% 60%;
-}
-.ftf-fly b:last-child::after { left: 4px; }
-@keyframes ftf-wing {
-  0%, 100% { transform: scaleX(1)   skewY(0deg); }
-  50%      { transform: scaleX(.34) skewY(8deg); }
-}
-.ftf-fly-1 { animation: ftf-fly-a 38s linear infinite; }
-.ftf-fly-2 { animation: ftf-fly-b 46s linear infinite; animation-delay: -12s; }
-@keyframes ftf-fly-a {
-  0%   { transform: translate(-40px, 150px) rotate(8deg); }
-  25%  { transform: translate(300px, 76px)  rotate(-6deg); }
-  50%  { transform: translate(180px, 250px) rotate(10deg); }
-  75%  { transform: translate(420px, 130px) rotate(-4deg); }
-  100% { transform: translate(1330px, 200px) rotate(6deg); }
-}
-@keyframes ftf-fly-b {
-  0%   { transform: translate(1320px, 600px) rotate(-8deg); }
-  30%  { transform: translate(980px, 660px)  rotate(6deg); }
-  55%  { transform: translate(1120px, 520px) rotate(-10deg); }
-  80%  { transform: translate(760px, 640px)  rotate(4deg); }
-  100% { transform: translate(-50px, 580px)  rotate(-6deg); }
-}
-
 /* Reduced motion, and the game's own reduce switch, stop all of it. The farm
    still looks like a farm - the tufts and pollen simply hold still. */
 @media (prefers-reduced-motion: reduce) {
-  #ftf-amb *, #ftf-flit *, #ftf-amb, #ftf-flit { animation: none !important; }
-  #ftf-flit { display: none; }
+  #ftf-amb *, #ftf-amb { animation: none !important; }
 }
 #ftf-stage.ftf-still #ftf-amb *,
 #ftf-stage.ftf-still #ftf-flit * { animation: none !important; }
@@ -750,15 +680,6 @@ html, body {
 }
 
 /* ------------------------------------------------ wood + hay materials --- */
-.ftf-wood {
-  padding: 8px; border-radius: 15px; border: 3px solid var(--wood-edge);
-  background: linear-gradient(180deg, var(--wood-hi) 0%, var(--wood-lo) 100%);
-  box-shadow: 0 6px 0 var(--wood-deep), 0 14px 24px rgba(0, 0, 0, .32);
-}
-.ftf-wood-in {
-  border-radius: 10px; border: 2px solid #E0C795; padding: 8px 22px 10px; text-align: center;
-  background: linear-gradient(180deg, #FFF8E6 0%, var(--paper-2) 100%);
-}
 .ftf-hay {
   position: relative; padding: 10px; border-radius: 18px;
   background: repeating-linear-gradient(116deg, var(--hay-a) 0 6px, var(--hay-b) 6px 11px, var(--hay-c) 11px 16px);
@@ -843,10 +764,6 @@ html, body {
   box-shadow: 0 5px 0 var(--wood-deep), 0 10px 18px rgba(0, 0, 0, .26);
 }
 #ftf-bonus.ftf-in { opacity: 1; transform: translateX(-50%) translateY(0); }
-.ftf-bonus-cap {
-  font: 800 13px 'Nunito Sans', sans-serif; letter-spacing: 2.2px; text-transform: uppercase;
-  color: #3E2409; background: var(--gold); padding: 3px 9px 4px; border-radius: 999px;
-}
 #ftf-bonus-txt { font: 800 20px 'Nunito', sans-serif; color: #FFF6E0; text-shadow: 0 2px 0 rgba(50, 30, 8, .5); }
 #ftf-bonus.ftf-done { background: linear-gradient(180deg, #86C63F 0%, #5C9A2C 100%); border-color: var(--green-edge); box-shadow: 0 5px 0 var(--green-edge); }
 /* ------------------------------------------------------ fence readout ---

@@ -174,6 +174,7 @@ class FenceTheFarm {
     (this._perm || []).forEach(clearInterval);
     if (this._bgm) { try { this._bgm.el.pause(); } catch (e) {} }
     if (this.destroyGoatAudio) this.destroyGoatAudio();
+    if (this.destroyVoice) this.destroyVoice();   // the narrator stops with everything else
     if (this._ac) { try { this._ac.close(); } catch (e) {} }
   }
 
@@ -967,14 +968,6 @@ class FenceTheFarm {
     // The sign does the pointing, so it is always above the veil too.
     this.el.plank.classList.add('ftf-lit');
     this._lit.push(this.el.plank);
-  }
-
-  /* The fixed perimeter is the conceptual anchor, so when it needs pointing at
-     it draws attention to itself once rather than being narrated. */
-  lockPulse() {
-    const c = this.el['fence-badge'];
-    this.bump(c, 'ftf-lock-pulse', 620);
-    this.sfx('fence_snap');
   }
 
   /* A message that shows for a moment and then hands the plank back. */

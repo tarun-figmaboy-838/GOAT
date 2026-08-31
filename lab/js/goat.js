@@ -453,8 +453,6 @@ class GoatController {
   startEating() {
     this.G.eatFor = (GOAT_CONFIG.eatMin + Math.random() * (GOAT_CONFIG.eatMax - GOAT_CONFIG.eatMin)) / 1000;
   }
-  stopMovement() { this.speed = 0; }
-
   /* A destination worth walking to: inside the safe area, far enough to be a
      journey rather than a twitch, and never on top of the drag handle - that
      corner is the one thing on screen the player has to be able to see and

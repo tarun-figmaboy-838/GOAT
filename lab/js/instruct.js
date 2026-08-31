@@ -32,8 +32,7 @@ const INSTRUCT = {
   settleMs: 620,               // the one soft bounce
   idleMs: 5000,                // small hand
   goatMs: 10000,               // she glances at the handle
-  nudgeMs: 15000,              // a short line, last of all
-  handFade: 150
+  nudgeMs: 15000               // a short line, last of all
 };
 
 class InstructionController {
@@ -239,10 +238,6 @@ Object.assign(FenceTheFarm.prototype, {
     if (!this._instr) this._instr = new InstructionController(this);
     return this._instr;
   },
-  /* The sign's one entry point. Levels keep calling plankSay(line) and get the
-     paced reveal for free; anything that needs the line to be treated as a
-     request rather than a remark passes { type: 'action' }. */
-  say(line, opts) { this.instructor().show(Object.assign({ text: line }, opts || {})); },
   /* She looks at the corner - the second rung of the idle ladder. */
   lookAtHandle() {
     if (!this.dragAllowed()) return;
