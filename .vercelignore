@@ -23,15 +23,9 @@
 # mascot controller animates. Nothing references it any more; 1.75 MB.
 */assets/goat/goat-celebration.png
 
-# Loose source art at the repo root.
-#
-# THE LEADING SLASH IS LOAD-BEARING. This file uses .gitignore syntax, where a
-# bare `assets/` matches a directory of that name at ANY depth - so it was
-# silently excluding game/assets/ and lab/assets/ as well, and both games were
-# deploying with no art at all. That is what made the launcher render as a flat
-# green page: its grass is game/assets/art/grass-bg.png, and the file was never
-# uploaded. The slash anchors the pattern to the repo root, which is the only
-# assets/ that should be skipped.
+# Loose source art at the repo root. The leading slash anchors the pattern
+# there: `assets/` is also the name of the folder inside lab/, and the only one
+# that should ever be skipped is this top-level pile of originals.
 /assets/
 
 # Test harnesses, never deployed. Named ones were listed one by one, which meant
