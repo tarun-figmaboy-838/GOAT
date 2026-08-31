@@ -42,10 +42,10 @@ round so that *every legal shape* of that round fits clear of the HUD.
 
 | # | Name | Perimeter | Start | Optimum | Mechanic | Light | Extra |
 |---|------|-----------|-------|---------|----------|-------|-------|
-| 1 | Discovery | 20 m | 8×2 (16 m²) | 5×5 (25 m²) | tutorial | morning | 9 gated beats |
-| 2 | Farm Record | 24 m | 10×2 (20 m²) | 6×6 (36 m²) | record | midday | record 32 m² |
-| 3 | Visual Trap | 28 m | 10×4 (40 m²) | 7×7 (49 m²) | misconception | evening | forced stretch 12×2 |
-| 4 | Master Builder | 32 m | 13×3 (39 m²) | 8×8 (64 m²) | mastery | golden | optional target 48 m² |
+| 1 | Discovery | 20 m | 8×2 (16 m²) | 5×5 (25 m²) | tutorial | morning | gated beats · 1 goat |
+| 2 | Farm Record | 24 m | 10×2 (20 m²) | 6×6 (36 m²) | record | midday | record 32 m² · 2 goats |
+| 3 | Visual Trap | 28 m | 10×4 (40 m²) | 7×7 (49 m²) | misconception | evening | forced stretch 12×2 · 3 goats |
+| 4 | Master Builder | 32 m | 13×3 (39 m²) | 8×8 (64 m²) | mastery | golden | exact 48 m² then max · 4 goats |
 
 Farm 1 runs at `cell = 80`.
 
@@ -144,6 +144,30 @@ An 8-direction pose set (`goat-turning.png`) was trialled to make turns read as 
 coming round rather than the sprite spinning. It was removed: at the size she is drawn in
 the field the pose changes were not legible enough to be worth the extra sheet.
 
+### The herd (`js/herd.js`)
+
+One goat is the character; the rest are the reason. Each farm adds another animal —
+**1, 2, 3, 4** — set by `goats` on the round.
+
+- **The scripted goat is untouched.** `GoatController` still owns her beats, her tilt,
+  her reactions and her walk-on. Herd animals are ambient only: never addressed, never
+  celebrating, and never bleating — a second mouth would fight the beat hers land on.
+- **They follow the phase**, like everything else here: `herdWanted()` returns a count
+  only in `intro` and `play`, so the recap, the tracer, the peak, the live explanation,
+  the completion screen, the journey and the title all keep exactly one goat. No screen
+  has to remember to clear them.
+- **Same maths, same art.** They reuse her sheets, her 4×2 frame arithmetic, her
+  metre-true `goatBox()` and the same `bounds()` — so the fence has the last word on
+  them too, in every state, exactly as it does for her. They sit at `z-index: 298`,
+  one layer behind her.
+- **Personal space.** Walk targets are rejected within `goatSpan() × 0.75` of another
+  animal, and a soft push apart runs every frame regardless — choosing well-spaced
+  targets is not enough on its own, because a pasture closing around the herd pushes
+  them together whatever they chose. The fence clamp runs afterwards, so it still wins.
+- **The lesson is unaffected.** The count is fixed for the whole of a farm, so every
+  shape within that farm is compared against the same herd. What changes is the motive:
+  a long thin strip with four goats standing nose to tail in it argues for itself.
+
 ### Sprite-sheet cleanup that was required
 
 The supplied sheets carried a keyed-matte halo of near-pure red and yellow hugging the
@@ -157,14 +181,22 @@ per frame, drop stranded faint pixels with no solid neighbour, erode one pixel.
 
 | Key | Value | Meaning |
 |-----|-------|---------|
-| `GOAT_METRES` | 1.30 | Nose to rump. Constant — never scales with the pasture. |
+| `GOAT_METRES` | 2.00 | Nose to rump. A deliberate exaggeration for readability — at 1.30 she came out ~50 px on the graph-sharing screens. Constant, so she still never scales with the pasture. |
 | `SHEET.content` | 0.877 | How much of a frame she fills lengthwise. |
 | `SHEET.aspect` | 0.5 | Frame width / height, so she is half as wide as long. |
 | `SHEET.faceDeg` | 90 | The sheets draw her nose south, so the sprite is turned back 90° to sit on her heading. |
 | `TILT` | 0.62 s | Time for the camera to come overhead. |
 
-At `cell = 80` her drawn box is 59×119 px and her visible length is 104 px. She is
-deliberately secondary to the geometry.
+At `cell = 80` her drawn box is 91×182 px and her visible length is 160 px.
+
+`GOAT_METRES` was swept against every legal shape of every farm before being raised from
+1.30 to 2.00. At 2.00 the worst clearance on any pasture two metres or deeper is **+16.8 px**
+(farm 4 at 13×3). One-metre pens cannot hold her at any size — they could not at 1.30
+either — and there `axisLock()` lays her along the long axis and she brushes the rails.
+Above 2.20 the real shapes begin to fail as well.
+
+What matters is not the value but that it is a **constant**. She still never grows as the
+field becomes balanced, so none of the "more grass" impression comes from her.
 
 ### Why she cannot leave the fence
 
@@ -222,8 +254,11 @@ teleporting.
 
 ## 02. Title
 
-- **Copy:** logo board reads *Fence the Farm*; one CSS button, *Play*. No instruction —
-  the button is self-evident.
+- **Copy:** logo board reads *Fence the Farm*, one line under it — *How much grass can
+  one fence hold?* — and one CSS button, *Play*. No instruction: the button is
+  self-evident, and the line is the question the whole game answers, so a player arrives
+  already holding the idea rather than meeting it eleven seconds in. The game used to
+  sell itself with nothing but its name.
 - **Composition:** board hangs on two ropes; goat centre-stage at (640, 520); button below her.
 - **Goat:** **side view**, 190 px tall, hooves on the ground. Blinks on an irregular beat
   so standing still never looks like a paused image.
@@ -260,20 +295,29 @@ The only farm that teaches the interaction. It is a gated nine-beat sequence: th
 will not advance until the student has actually *done* the thing, and the numbers stay
 hidden until they have been earned.
 
+**Measured timeline to playable: 11.6 s.** Every line the player is given, in order:
+
 | Gate | Beat |
 |------|------|
-| SEE | **1.** *Give her more grass*. Goat grazes a cramped strip. 2.1 s hold. |
-| SEE | **2.** Fence is built; fence value appears. Play begins. |
+| SEE | **1.** *Silent.* The fence builds around her (1.15 s) and she walks the length of the 8×2 strip. Nothing is said. This beat used to assert *"give her more grass"* over an empty lawn — the fence was not built until beat 2, so the cramped field the line was about was not on screen while the line was being read. |
+| SEE | **2.** **The goal, before any vocabulary:** *Same 20 m of fence. Give her the biggest field you can.* She bleats. Then the interface is introduced, one idea at a time, each arriving **with its own card**: **perimeter** (stage dims, field + fence card lit, the measuring light walks the fence, 3.3 s) then **area** (field + area card lit, the metre grid turns up and the card **counts 0 → 16** with it, 3.0 s). |
 | TOUCH | **3.** *Drag this corner*. Handle glows and breathes; hand cursor points at it. Waits indefinitely. |
 | TOUCH | **4.** Grab registered. Hint retires permanently. |
-| NOTICE | **5.** First release with a larger area → *More grass — still 20 m*. She bleats. 2.2 s hold. **This is the lesson.** |
-| TRY | **6.** *Can you give her even more?* Opens after 3 moves or 1 reversal. |
+| NOTICE | **5.** First release with a larger area → *Area went up. Perimeter is still 20 m.* She bleats. 2.2 s hold. **This is the lesson.** |
+| TRY | **6.** *Try another shape.* Opens after 3 moves or 1 reversal. |
 | TRY | **7.** *Find the biggest area*. Free play. |
 | DISCOVER | **8.** 5×5 reached → *Biggest grass area!* Burst, grass puffs, side-length cards appear. |
 | DISCOVER | **9–10.** Start-versus-best comparison, then *You've got it!* and *Next farm*. |
 
 - **Skip:** *Skip tutorial* jumps to beat 7. Taught once per browser (`localStorage`
-  key `ftf.tutorial`).
+  key `ftf.tutorial`). It has to put back everything the intro borrowed — the lights,
+  the tracer, the dimmed fence and the metre grid — or a skipped tutorial starts with
+  the grid on or the fence still faded.
+- **Why this order.** The objective used to arrive at beat 7, after the player had
+  already been dragging for a while; beats 1 and 2 gave them a riddle
+  (*"Same fence. More grass. Find out how."*) and then two definitions. They now get
+  the picture, then the goal, then the vocabulary — and area is **counted** rather than
+  named, because naming a quantity and showing it are not the same lesson.
 - **Reveal rule:** side lengths appear **after** the shape is found, not during the drag —
   during play the student reads the pasture, not numbers.
 
@@ -294,9 +338,10 @@ P = 28 m · 10×4 (40 m²) → 7×7 (49 m²) · forced stretch 12×2
 The only farm that deliberately sends the student the wrong way first, because the
 misconception has to be *felt* to be dislodged.
 
-- **Phase 1:** *Stretch it longer*. The game asks for 12×2 — longer, and worse (24 m²).
-- **The flip:** on reaching the stretch target: *Longer field. Less grass.* A pause, then
-  the instruction changes to *Now find the most grass*.
+- **Phase 1:** *Test an idea: make the field longer*. The game asks for 12×2 — longer, and
+  worse (24 m²). Framed as an experiment, never as advice: *"Stretch it longer"* reads as a
+  recommendation and would reinforce the misconception the farm exists to dislodge.
+  the instruction changes to *Now find the maximum area*.
 - **Phase 2:** free play to 7×7. *Better. Can you do more?* on partial progress.
 - **Resolution:** *Longer wasn't more grass.* Their own longest shape is remembered for the finale.
 - **Light:** `evening`.
@@ -355,25 +400,38 @@ grass — the earlier single gold stroke was invisible against both.
   honestly: *with the same rectangular perimeter*.
 - **Goat:** happy bleat and a hop at the peak; emblem assembles rather than popping.
 
-## 11. Formula
+## 11. The live explanation
 
-- **Job:** name the two quantities the student has been feeling, and separate them.
-- **Content:** *Fence around the outside* (perimeter) versus *Grass inside* (area), then
-  the claim in three blocks: *Fixed perimeter* — *does not mean* — *Fixed area*.
-- **Tracer:** re-used for a single pasture, 1300 ms, to tie "perimeter" to the thing they
-  just watched being measured.
-- **Exit:** *See why* (optional algebra) or *Continue*.
+The one screen that explains the game, and it explains it by handing the fence back
+rather than by printing the result. It replaced three static panels — a formula
+board, a *See why* algebra wall, and a *Strategy discovered* card. All three told the
+student something; this one lets them do it. `js/explain.js`.
 
-## 12. See why · optional algebra
-
-- **Audience:** opt-in. The lesson is complete without it.
-- **Content:** the meter they were already reading becomes a real graph: `L + W = 16`,
-  *half of the 32 m fence*, and *The path you dragged was this curve.*
-- **Why it works:** the curve is not new information — it is the same drag they performed,
-  re-plotted. That is the whole design.
+- **Job:** let the student hold a pinned perimeter and watch every number move with
+  their hand.
+- **Composition:** the pasture takes the left of the stage (`LIVE` = 70…610 × 150…560,
+  cell fitted so *every* reachable shape stays on screen), the area-against-length
+  curve takes the right.
+- **One readout, and it is arithmetic:** `8 × 8 = 64 m²`, recomputed from the one
+  state, with a token riding the curve at their hand.
+- **What is deliberately NOT here.** An earlier version also printed
+  `L + W = 8 + 8 = 16`, a three-step derivation behind a *See why* button, a peak
+  label reading *"8 × 8 = 64 m² — the most from 32 m"*, and a two-line strategy
+  caption. Five pieces of text around one moving picture meant the picture was the
+  least of it. A screen meant to be **played with** must not also be a screen meant to
+  be **read**. The hint is now three words, the peak marker says *Most area*, and the
+  perimeter card's own **FIXED** padlock carries what the hint used to repeat.
+- **Start shape:** the *lopsided* shape that farm began with, never the balanced one.
+  Opening on the answer would hand them the discovery before they touched anything.
+- **The strategy line is never printed.** *Balanced sides give the most area* appears
+  only if and when they land on the square themselves, and only after a move of their
+  own — the first draw of the screen cannot count as a discovery.
+- **Landing on the square here is a discovery, not a win.** `evaluateRelease`,
+  `levelStep` and `levelRelease` are all short-circuited in this phase, so the farm's
+  success path cannot run over the top of the explanation.
 - **Exit:** *Continue* → completion.
 
-## 13. Completion
+## 12. Completion
 
 - **Copy:** badge board *Master builder* / *Same fence. Smarter shape.* Footer *4 farms
   completed*, then *Play again* and *Explore*.
@@ -383,7 +441,7 @@ grass — the earlier single gold stroke was invisible against both.
 - **Goat:** grazes the finished field.
 - **Verified:** 14 px clear of the board above, 12 px clear of the footer below.
 
-## 14. Explore · sandbox
+## 13. Explore · sandbox
 
 - **Job:** no win condition, no target. *Pick a fence*, then a free hand.
 - **Perimeters:** 16, 20, 24, 28, 32, 40 m. Each starts deliberately unbalanced so there
@@ -480,6 +538,144 @@ Every meaningful beat pushes an event to `window.__ftfAnalytics`: `first_handle_
 7. **Module glides ignored reduced motion.** The `left`/`top` transition was set
    unconditionally.
 
+### Bugs fixed in the following pass
+
+1. **The mascot's sparkles never animated.** `sparkles()` asks for `animation: ftf-spark`,
+   and no `@keyframes ftf-spark` existed — only `ftf-goat-spark`, which belongs to the
+   field goat. With `fill: both` and no keyframes the stars simply appeared at full
+   opacity 290–360 px out and sat there until the layer was cleared. Four times per
+   celebration, four celebrations per playthrough. `ftf-dust` had the neighbouring bug:
+   its keyframes dropped the `translate(-50%,-50%)` its base rule sets, so every landing
+   puff jumped by half its own size on frame one. **Both keyframes now carry the
+   translate**, because a keyframe transform replaces the whole property.
+2. **The success beats played behind the celebration.** `succeed()` scheduled the fence
+   settle, her hop, the grass puffs and the reveal of the side lengths at +90/+190/+300/
+   +560 ms — and then called `levelSucceed()`, which is wrapped by `cheer.js` and blurs
+   the farm out for eight seconds. Every one of those beats played to a screen nobody
+   could see. They are now `succeedField()`, handed to the celebration and run as the farm
+   comes back. Verified by ordering assertion: `celebrate-start > celebrate-end >
+   succeedField`.
+3. **The whole question system was dead code.** `askChoice()` was fully built and never
+   called once; nothing set `lv.prediction`, so `predictVerdict()` always returned null and
+   `showBanner()` was unreachable with it. The `#ftf-ask` panel, its CSS and ten
+   `ask.*` / `predict.*` strings all shipped inert. It was briefly wired up at the two
+   beats it was written for — and then **deleted outright** in the decluttering pass
+   below: two multiple-choice questions in a drag-and-see game read as a worksheet
+   dropped on top of the farm, which is exactly what the interaction exists to avoid.
+4. **Two screens were unreachable in play.** Every route to `formulaScreen()` and
+   `advancedScreen()` was redirected to the live explanation; only the debug navigator
+   still called them. Removed: both methods, `#ftf-fm` and `#ftf-adv`, their 50 lines of
+   CSS, four dead button listeners and nine orphaned i18n keys. `advCurve()` and
+   `finaleTraceOne()` stayed — the live screen and the tutorial intro use them.
+5. **The mascot preloaded eleven poses mid-performance.** Its controller is what loads and
+   decodes them, and it was only constructed inside `playGoatCelebration` — so the first
+   celebration, the one that has to land hardest, paid for 11 × 620 px of PNG on its own
+   beats. Built in `init()` now.
+6. **`explainScreen()` drew its readouts twice**, once eagerly and once in the build
+   callback. Harmless only because the opening shape is deliberately lopsided: it left the
+   `_liveMoves > 0` guard — the only thing stopping the opening shape being reported as the
+   student's own discovery — one line from never being false.
+
+### The decluttering pass
+
+Driven by three screenshots of the running game: too much text, a quiz that read as an
+interruption, panels sitting on the pasture, and a goat too small to be the reason for
+any of it.
+
+1. **Both multiple-choice questions are gone**, and with them `askChoice`,
+   `answerChoice`, `closeChoice`, `dismissChoice`, `showBanner`, `predictVerdict`,
+   `lv.prediction`, `tutCheck`, `trapAsk`, the `#ftf-ask` panel, its 47 lines of CSS and
+   its ten strings. Tutorial beat 5 now advances straight to beat 6 on its own timer,
+   and farm 3 goes straight from the instruction to the experiment.
+2. **The live explanation lost four of its six pieces of text** — see §11.
+3. **The emblem is a bar along the bottom of the stage**, not a card in the middle of
+   it. At `top: 452` with three lines it sat on the fence, and the peak screen's pasture
+   can be dragged nine metres deep, so there is no middle that is reliably empty. The
+   button moved beside the card rather than under it, which keeps the bar ~100 px tall.
+   Its third line — the rule, spelled out — was dropped: it was a textbook sentence long
+   enough to widen the card into the pasture, and the two numbers above it already
+   showed what it said. **Measured: emblem top 598, pasture bottom 533.**
+4. **`GOAT_METRES` 1.30 → 2.00.** See §D.
+5. **The live corner never gave its badge back properly.** `render()` set
+   `zIndex = 880` on the draggable post but only ever reset `filter` and `scale`, so
+   every post that had *once* been the corner went on floating above the whole fence for
+   the rest of the round. It also set the glide transition unconditionally, overriding
+   the deliberate `transition: none` that `makeModule` gives a module under reduced
+   motion — so a player who asked for no motion still got sliding fence posts, and once
+   a post had been the corner it kept the glide for good. Both now reset.
+
+### The bug the bigger goat caused, and the one it exposed
+
+Raising `GOAT_METRES` to 2.00 raised `goatTurnPad` with it, and that changed which
+pastures `axisLock()` considers too narrow to turn around in. At 1.30 the lock fired only
+on one-metre pens. At 2.00 it also fires on **two-metre** pens — correctly, because she
+genuinely cannot turn in 160 px when she needs 206 — and farm 1 starts at 8×2.
+
+**The hang.** Her walk-on at farm 1 targets a point *inside* the pasture, and she starts
+outside it. With the pasture axis-locked, `updateHeading` pinned her heading to due east
+or west, so she could never close the vertical gap: she walked sideways for ever, `d`
+never fell below the arrival threshold, `arrive()` never ran, `_enterDone` never fired,
+and `levelIntro()` was never called. The result was a stage with grass and a goat on it
+and **nothing else** — no fence, no cards, no sign — because the farm had never started.
+Reproduced at (566, 677) heading away from a target at y = 212.
+
+**And the one it exposed.** The same trap was already reachable in ordinary play, and had
+been since long before the size change: any target with an off-axis component, in any
+locked pen, left her walking toward something she could not reach. Scripted beats set
+targets directly, so it was not confined to her own wandering.
+
+Two fixes, both in `js/goat.js`:
+
+1. `updateHeading` does not apply the lock while she is `enter`ing or travelling. In both
+   she is deliberately outside the pasture, so a lock derived from it is meaningless.
+2. `updateMovement` measures arrival **along the axis she can actually travel** —
+   `|dx|` when locked to x, `|dy|` when locked to y, otherwise the true distance. Putting
+   it there covers every caller, rather than requiring each scripted beat to know about
+   the lock.
+
+Both verified: she now arrives at (567, 215), `levelIntro` fires, 40 modules build; and a
+deliberately off-axis target in farm 1's locked 8×2 resolves to `idle` within 15 s
+instead of walking for ever.
+
+### The polish pass, from played screenshots
+
+1. **Copy has one home.** A tagline briefly sat on the title screen above *Play*. It is
+   gone; the title is a sign and a button, and every line the game speaks is on the
+   instruction board after *Play*. The hook — *One fence. How much grass?* — is now beat 1,
+   asked while the fence goes up around her.
+2. **Six lines overflowed the board.** `fitSign` binary-searched between `min: 22` and
+   `max: 42` — but treated `min` as a hard stop, so a line that still did not fit at 22 px
+   was rendered at 22 px and hung off both ends. The cream board is only ~340 px wide.
+   `min` is now the *preferred* floor and a real `floor: 15` bounds the search, so the
+   board always wins; and the six long lines were shortened, so nothing has to shrink far.
+   **Measured: 26 of 26 lines fit, smallest 23 px.**
+3. **One button did not match the others.** `#ftf-next` overrode `.ftf-btn` with
+   `width: 224px; height: 62px; padding: 0`, so it was the only button not sized by its
+   label — *See the proof* was squeezed while *Play* and *Continue* grew to fit. It now
+   carries position only, and `offerNext()` centres it on the recap gap from its real
+   width. **And the visible ring around it was the focus ring:** it is hidden with
+   `opacity`, so it kept focus after a click, and came back still `:focus-visible`. It is
+   blurred when it leaves.
+4. **Two hands in the tutorial.** `#ftf-hand` (the teacher) and `#ftf-hint-hand` (the idle
+   helper) are the same artwork at different sizes, and both could point at the same
+   corner. The idle ladder no longer arms at all while the tutorial is teaching the control
+   (farm 1, before beat 7) — idle help is for a player nobody is currently pointing
+   anything at. The guard that was meant to prevent this read `getComputedStyle().opacity`
+   on an element carrying a 300 ms fade, so it could sample a visible hand and conclude it
+   was hidden; it reads the set value now.
+5. **The celebration is 5 s, not 8.** One leap, one flourish, a settle — the second hop is
+   gone rather than compressed, because at five seconds there is no back half to pad. Every
+   `move()` now lasts until the next one begins. **Measured: 5000 ms, 21 motion beats,
+   largest gap with the wrapper standing still = 0 ms.** Dead air between beats is what
+   made eleven poses read as a slideshow.
+6. **Herd fixes.** Goats left outside the fence during a fast drag — they gave ground at
+   walking pace with no leash, while the scripted goat has always been hard-clamped to
+   within half a metre by `moveGoatInside`. They get the same leash now. The jitter was
+   the separation push and the walk fighting each other, so a shove now carries the
+   destination with it. And they hit the same axis-lock trap: farm 2 starts at 10×2, which
+   is locked, so an off-axis target left them sliding for ever — that endless slide is what
+   read as glitching.
+
 ### QA status
 
 22 of 22 automated checks pass: the invariant across 30 shapes, module count = 2P, area
@@ -488,30 +684,65 @@ rendering, all six explore perimeters, completion fit, card leakage, the tilt in
 directions, all three sheets loading, a reduced-motion round, zero orphaned DOM nodes, and
 zero JS errors.
 
+A headless play-through (Chrome `--headless=new`, driven from a `__smoke.html` harness —
+the `**/__*` prefix keeps harnesses out of the deploy) adds 27 more, run twice, once at
+full motion and once with `forceReduce`: boot, the mascot preloaded in `init`, the
+`ftf-spark` keyframe resolving, the removed screens and the removed question machinery
+both absent while `advCurve` survives, the gated tutorial reaching play and advancing past
+beat 5 with nothing to answer, the celebration ordering, farm 3 running without a
+prediction, the peak, **the emblem measured clear of the pasture**, the peak marker and
+the live pill both free of algebra, and the live, completion, explore and title screens.
+**Zero JS errors on both runs.**
+
+Module accounting was checked separately across the farm-4 play → drag → peak → solve
+path: DOM count equals tracked count (64 = 2P) at every step, so nothing is orphaned.
+
+Screens are verified by actual capture, not only numerically — with
+`* { transition: none !important }` injected, since virtual time does not advance CSS
+transitions and an un-settled capture shows half-faded HUD and a curve still parked at
+its meter position.
+
+One thing that harness cannot drive: her scripted walk-on at farm 1. `arrive()` is
+reached from the rAF loop, and virtual time does not advance rAF — the same limitation
+already noted under *Frame-exact timing*. The full-motion run starts the tutorial with
+`_fresh = false` to step around it.
+
 ---
 
 ## Repository
 
 ```
 /
-  index.html            launcher: Play / Lab
   game/                 frozen reference build — do not edit
   lab/                  active build; all work happens here
     index.html
     css/style.css
     js/game.js          core engine, geometry, fence modules, input, rounds
-    js/levels.js        per-farm mechanics and the tutorial beat machine
-    js/finale.js        comparison, tracer, peak, formula, completion, explore
+    js/audio.js         synthesised SFX, layered music, the ducking bed
     js/goat.js          GoatController + the prototype adapters
-    js/audio.js         synthesised SFX and layered music
-    js/debug.js         20-state navigator
+    js/instruct.js      InstructionController: paced sign, idle help ladder
+    js/levels.js        per-farm mechanics and the tutorial beat machine
+    js/finale.js        comparison, tracer, peak, completion, explore
+    js/mascot.js        GoatMascotController: the 8s level-complete performance
+    js/cheer.js         staging for it — defocus, hand-off, input lock
+    js/explain.js       the live explanation screen
+    js/debug.js         state navigator
     js/i18n.js          string harvesting and runtime locale swap
     js/main.js          boot
     assets/art/         fence, HUD, side-view goat frames
-    assets/goat/        goat-walk.png, goat-eat.png, goat-bleat.png
-  vercel.json           cleanUrls + cache headers
+    assets/goat/        goat-walk/eat/bleat.png + the 11 cheer poses
+  vercel.json           redirects / → /lab/, cleanUrls + cache headers
   .vercelignore         drops source art at deploy time
 ```
+
+There is **no root `index.html`**. An earlier build had a Play / Lab chooser there;
+`vercel.json` now redirects `/` straight to `/lab/`, and `game/` stays reachable at
+`/game/` for reference.
+
+Load order matters and is fixed in `index.html`: `mascot.js` and `cheer.js` come after
+`levels.js` and `finale.js` because `cheer.js` wraps `levelSucceed` and `levelReset`;
+`explain.js` comes after them because it wraps `ownsMain`, `dragAllowed`, `levelStep`,
+`evaluateRelease` and `levelRelease`.
 
 `js/goat.js` and the other modules extend the prototype via
 `Object.assign(FenceTheFarm.prototype, {…})` and are loaded after `game.js`, before

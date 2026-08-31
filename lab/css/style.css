@@ -153,6 +153,25 @@ html, body {
   background-size: 400% 200%;            /* the sheets are 4 columns x 2 rows */
   transform-origin: 50% 50%;
 }
+/* The herd - the extra goats, one more per farm. Same sheets, same 4x2 frame
+   arithmetic and the same metre-true box as the scripted goat, because they ARE
+   the same animal. One layer behind her (298 against her 300), so the character
+   the game actually addresses is never the one you have to look for.
+
+   They live beside her rules on purpose. The sprite div MUST have a size - it
+   is what carries the sheet, while the outer box carries only position and
+   heading - and without these two rules the animals still exist, still sit at
+   the right coordinates and still report opacity 1, while drawing nothing at
+   all. That is exactly how the whole herd went invisible once. */
+.ftf-herd {
+  position: absolute; left: 0; top: 0; z-index: 298;
+  pointer-events: none; will-change: transform;
+}
+.ftf-herd-sprite {
+  width: 100%; height: 100%;
+  background-repeat: no-repeat;
+  background-size: 400% 200%;
+}
 /* Her title-screen self. Seen from the side, standing on the grass, so she is
    anchored on her hooves rather than her middle. She is only ever visible on
    the title and during the tilt into the farm. */
@@ -240,7 +259,7 @@ html, body {
 #ftf-hand {
   position: absolute; left: 0; top: 0; width: 96px; height: 115px; z-index: 910;
   opacity: 0; pointer-events: none; transition: opacity 300ms ease;
-  background: url('../assets/art/touch.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/touch.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(-3px 6px 8px rgba(24, 52, 12, .5));
 }
 
@@ -294,27 +313,11 @@ html, body {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   pointer-events: none;
 }
-#ftf-live-lw {
-  font: 800 24px 'Nunito', sans-serif; color: #2E4A86;
-  background: rgba(255, 252, 240, .93); padding: 5px 18px 6px; border-radius: 999px;
-  border: 3px solid var(--wood-edge); box-shadow: 0 4px 0 var(--wood-deep);
-}
 #ftf-live-a {
   font: 800 34px 'Nunito', sans-serif; color: #1D6B33;
   background: rgba(255, 252, 240, .96); padding: 6px 22px 8px; border-radius: 999px;
   border: 3px solid var(--wood-edge); box-shadow: 0 5px 0 var(--wood-deep);
 }
-/* The derivation is opt-in and appears in place, not on another screen. */
-#ftf-live-why {
-  position: absolute; right: 40px; top: 592px; width: 560px;
-  display: flex; justify-content: center; gap: 10px; opacity: 0;
-  transition: opacity 380ms ease; pointer-events: none;
-}
-.ftf-why-eq {
-  font: 700 17px 'Nunito Sans', sans-serif; color: var(--ink);
-  background: rgba(255, 252, 240, .82); padding: 4px 12px 5px; border-radius: 8px;
-}
-#ftf-live-why.ftf-in { opacity: 1; }
 
 /* Held back until they find the balanced shape themselves. */
 /* Low in the left half, clear of the pasture's deepest reach. It shares this
@@ -328,10 +331,6 @@ html, body {
   pointer-events: none;
 }
 #ftf-live-strategy b { color: #FFD65C; }
-#ftf-live-strategy i {
-  display: block; margin-top: 2px; font: 600 15px 'Nunito Sans', sans-serif;
-  font-style: normal; color: #E4EFD0;
-}
 #ftf-live-strategy.ftf-in { opacity: 1; transform: translateY(0); }
 
 #ftf-live-act {
@@ -683,9 +682,18 @@ html, body {
    for, and it buys nothing. */
 
 
+/* The two particle keyframes the mascot drives by CSS animation rather than by
+   the Web Animations API. Both MUST carry the translate(-50%,-50%) their base
+   rule sets: a keyframe transform replaces the whole property, so leaving it
+   out makes the piece jump by half its own size on its first frame. */
+@keyframes ftf-spark {
+  0%   { transform: translate(-50%, -50%) scale(0)   rotate(-25deg); opacity: 0; }
+  35%  { transform: translate(-50%, -50%) scale(1)   rotate(0deg);   opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(.35) rotate(20deg);  opacity: 0; }
+}
 @keyframes ftf-dust {
-  0%   { opacity: .3; transform: scale(.6, .6); }
-  100% { opacity: 0;  transform: scale(1.3, .8); }
+  0%   { opacity: .3; transform: translate(-50%, -50%) scale(.6, .6); }
+  100% { opacity: 0;  transform: translate(-50%, -50%) scale(1.3, .8); }
 }
 /* Reduced motion: she is simply there, brightly, and the farm still softens.
    No jump, no particles, no burst - but the moment still reads as a success. */
@@ -722,7 +730,7 @@ html, body {
   position: absolute; left: 0; top: 0; width: 46px; height: 55px; z-index: 912;
   margin: -6px 0 0 -6px;
   opacity: 0; pointer-events: none;
-  background: url('../assets/art/touch.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/touch.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(-2px 4px 5px rgba(24, 52, 12, .45));
   transition: opacity 150ms ease;
 }
@@ -775,7 +783,7 @@ html, body {
   position: relative;
   width: var(--sign-w, 520px);
   height: calc(var(--sign-w, 520px) / 3.6837);   /* 2096 x 569 */
-  background: url('../assets/art/sign.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/sign.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 12px 18px rgba(24, 52, 12, .4));
 }
 /* The cream board, measured off the artwork. */
@@ -791,7 +799,7 @@ html, body {
 /* --------------------------------------------------------- counter card ---
    The supplied counter art, with the cream board's own inset as the padding. */
 .ftf-card {
-  background: url('../assets/art/card.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/card.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 7px 12px rgba(24, 52, 12, .38));
 }
 .ftf-card-in { text-align: center; }
@@ -841,53 +849,6 @@ html, body {
 }
 #ftf-bonus-txt { font: 800 20px 'Nunito', sans-serif; color: #FFF6E0; text-shadow: 0 2px 0 rgba(50, 30, 8, .5); }
 #ftf-bonus.ftf-done { background: linear-gradient(180deg, #86C63F 0%, #5C9A2C 100%); border-color: var(--green-edge); box-shadow: 0 5px 0 var(--green-edge); }
-
-/* ------------------------------------------------------- the question ---
-   Two choices under the instruction board. It borrows the board's own cream
-   and wood rather than introducing a quiz style of its own, and it is narrow
-   on purpose: it must read as part of the farm, not as a test dropped on top
-   of it. Only 8 words of question ever fit, which is the intended limit. */
-#ftf-ask {
-  position: absolute; left: 50%; top: 176px; z-index: 1001;
-  transform: translateX(-50%) translateY(-6px);
-  opacity: 0; pointer-events: none;
-  transition: opacity 300ms ease, transform 300ms cubic-bezier(.34,1.4,.64,1);
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  width: max-content; max-width: 620px;
-}
-#ftf-ask.ftf-in { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
-#ftf-ask-q {
-  font: 800 20px 'Nunito', sans-serif; color: var(--ink);
-  background: var(--cream); padding: 7px 18px 8px; border-radius: 999px;
-  border: 3px solid var(--wood-edge);
-  box-shadow: 0 4px 0 var(--wood-deep), 0 8px 16px rgba(0, 0, 0, .22);
-  text-align: center;
-}
-#ftf-ask-row { display: flex; gap: 12px; }
-.ftf-ask-btn {
-  font: 800 18px 'Nunito', sans-serif; color: #FFF6E0; cursor: pointer;
-  padding: 9px 22px 11px; border-radius: 999px;
-  border: 3px solid var(--wood-edge);
-  background: linear-gradient(180deg, #C79148 0%, #9A6B33 100%);
-  box-shadow: 0 5px 0 var(--wood-deep), 0 9px 16px rgba(0, 0, 0, .24);
-  text-shadow: 0 2px 0 rgba(50, 30, 8, .5);
-  transition: transform 90ms ease, filter 140ms ease;
-}
-.ftf-ask-btn:hover { filter: brightness(1.08); }
-.ftf-ask-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--wood-deep); }
-/* The chosen answer stays lit while the feedback is read, so the player can
-   see what they picked. Neither state is a red cross: a wrong guess here is
-   a reason to look at the locked value again, not a failure. */
-.ftf-ask-btn.ftf-picked  { background: linear-gradient(180deg, #86C63F 0%, #5C9A2C 100%); border-color: var(--green-edge); box-shadow: 0 5px 0 var(--green-edge); }
-.ftf-ask-btn.ftf-rethink { background: linear-gradient(180deg, #E6A93C 0%, #C1832A 100%); }
-.ftf-ask-btn[disabled]   { cursor: default; opacity: .55; }
-#ftf-ask-fb {
-  font: 700 17px 'Nunito Sans', sans-serif; color: var(--cream);
-  text-shadow: 0 2px 0 var(--ink), 0 3px 9px rgba(0, 0, 0, .45);
-  opacity: 0; transition: opacity 240ms ease; min-height: 22px; text-align: center;
-}
-#ftf-ask-fb.ftf-in { opacity: 1; }
-
 /* ------------------------------------------------------ fence readout ---
    Constant, small, quiet, never animated (§UI hierarchy). */
 /* The supplied counter card. Its cream board is inset 23/236 across and
@@ -896,7 +857,7 @@ html, body {
   position: absolute; right: 26px; top: 22px; z-index: 1000; pointer-events: none;
   opacity: 0; transition: opacity 400ms ease;
   width: 190px; height: 113px;
-  background: url('../assets/art/card.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/card.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 7px 12px rgba(24, 52, 12, .4));
 }
 #ftf-fence-badge .ftf-card-in {
@@ -937,7 +898,7 @@ html, body {
 #ftf-area-card {
   position: absolute; right: 26px; top: 428px; width: 224px; height: 129.5px;
   z-index: 1000; pointer-events: none; opacity: 0; transition: opacity 400ms ease;
-  background: url('../assets/art/area-card.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/area-card.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 8px 14px rgba(24, 52, 12, .42));
 }
 .ftf-area-in {
@@ -1079,14 +1040,20 @@ html, body {
   box-shadow: 0 0 0 3px var(--wood-deep), 0 0 0 6px var(--cream);
 }
 
+/* Position only. It used to also set width:224, height:62 and padding:0, which
+   made it the one button in the game that did NOT take its size from .ftf-btn:
+   a fixed pill that squeezed a long label like "See the proof" while Play and
+   Continue grew to fit theirs. Every button now comes from one rule, and this
+   one only says where it goes. */
 #ftf-next {
-  position: absolute; right: 26px; top: 620px; width: 224px; height: 62px;
-  padding: 0; z-index: 1000; opacity: 0; pointer-events: none;
+  position: absolute; right: 26px; top: 620px;
+  z-index: 1000; opacity: 0; pointer-events: none;
 }
-/* During a recap it sits in the gap between the two builds. */
-/* Between the two builds, with clear air below - a button resting on the
-   frame edge reads as clipped, not placed. */
-#ftf-next.ftf-mid { right: auto; left: 50%; margin-left: -112px; top: 630px; }
+/* During a recap it sits in the gap between the two builds, with clear air
+   below - a button resting on the frame edge reads as clipped, not placed.
+   offerNext() sets `left` from the button's REAL width once the label is on it,
+   because a label-sized button no longer has a width to hard-code. */
+#ftf-next.ftf-mid { right: auto; margin-left: 0; top: 630px; }
 
 /* ================================================== SCREEN 1 · TITLE === */
 #ftf-title { position: absolute; inset: 0; z-index: 260; pointer-events: none; }
@@ -1124,7 +1091,7 @@ html, body {
 .ftf-cmp-lbl {
   position: absolute; top: 512px; width: 320px; height: 185px;
   opacity: 0; transition: opacity 420ms ease;
-  background: url('../assets/art/area-card.png') 0 0 / 100% 100% no-repeat;
+  background: url('../assets/art/area-card.webp') 0 0 / 100% 100% no-repeat;
   filter: drop-shadow(0 9px 16px rgba(24, 52, 12, .44));
 }
 .ftf-cmp-in {
@@ -1149,65 +1116,26 @@ html, body {
 .ftf-cmp-area i { font: 700 23px "Osmose", "Nunito", sans-serif; font-style: normal; color: var(--area-unit); }
 
 /* The emblem that assembles when the peak is found. */
+/* A BAR along the bottom of the stage, not a card in the middle of it.
+
+   At top:452 with three lines this reached up into the pasture and sat on the
+   fence. There is no "middle" that is reliably empty here: the peak screen's
+   pasture is dragged, and at its deepest it reaches y=577. The bottom strip
+   always is empty, so that is where the way-on lives. The button sits BESIDE
+   the card rather than under it, which keeps the whole bar about 100px tall. */
 #ftf-emblem {
-  position: absolute; left: 50%; top: 452px; width: 560px; transform: translateX(-50%);
-  z-index: 1010; display: none; text-align: center;
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 1010; display: none; align-items: center; gap: 20px;
+  text-align: center; white-space: nowrap;
 }
-#ftf-emblem .ftf-hay-in { padding: 12px 20px 14px; }
-.ftf-emb-1 { font: 700 34px 'Osmose', 'Nunito', sans-serif; color: var(--ink); line-height: 1.06; }
-.ftf-emb-2 { margin-top: 3px; font: 800 22px 'Nunito', sans-serif; color: var(--area-ink); }
-.ftf-emb-3 { margin-top: 3px; font: 600 15px 'Nunito Sans', sans-serif; color: var(--cap); }
-#ftf-emblem .ftf-btn { pointer-events: auto; margin-top: 14px; }
+#ftf-emblem .ftf-hay-in { padding: 8px 24px 10px; }
+.ftf-emb-1 { font: 700 28px 'Osmose', 'Nunito', sans-serif; color: var(--ink); line-height: 1.06; }
+.ftf-emb-2 { margin-top: 2px; font: 800 21px 'Nunito', sans-serif; color: var(--area-ink); }
+#ftf-emblem .ftf-btn { pointer-events: auto; margin-top: 0; flex: none; }
 
-/* ============================================ FORMULA, IN THE FIELD === */
-#ftf-fm { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
-.ftf-fm-block { position: absolute; left: 700px; width: 320px; opacity: 0; transition: opacity 460ms ease; }
-#ftf-fm-per { top: 152px; }
-#ftf-fm-area { top: 372px; }
-.ftf-fm-cap {
-  font: 700 15px 'Nunito Sans', sans-serif; letter-spacing: 2.6px; text-transform: uppercase;
-  color: #FFF3D0; text-shadow: 0 2px 0 rgba(40, 70, 20, .8);
-}
-.ftf-fm-eq { margin-top: 3px; font: 700 34px "Nunito", sans-serif; text-shadow: 0 3px 0 rgba(30, 40, 60, .35); }
-.ftf-fm-eq-p { color: #CFE0FF; }
-.ftf-fm-eq-a { color: #CFF3E4; }
-.ftf-fm-sub { margin-top: 1px; font: 600 22px "Nunito Sans", sans-serif; color: #F4EBCE; opacity: 0; transition: opacity 380ms ease; text-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
-.ftf-fm-res {
-  display: inline-block; margin-top: 7px; opacity: 0;
-  transition: opacity 380ms ease, transform 420ms cubic-bezier(.34,1.4,.64,1);
-  transform: scale(.9);
-  font: 700 34px "Osmose", "Nunito", sans-serif;
-  padding: 3px 16px 5px; border-radius: 11px;
-}
-.ftf-fm-res.ftf-in { opacity: 1; transform: scale(1); }
-.ftf-fm-res-p { color: #1B2A5A; background: linear-gradient(180deg, #DCE8FF 0%, #B9CCF2 100%); box-shadow: 0 4px 0 #7E90BC; }
-.ftf-fm-res-a { color: #12452F; background: linear-gradient(180deg, #DCF7E4 0%, #B3E5C6 100%); box-shadow: 0 4px 0 #74AE8B; }
-#ftf-fm-core {
-  position: absolute; left: 0; right: 320px; top: 618px; text-align: center; opacity: 0;
-  transition: opacity 500ms ease;
-  display: flex; align-items: baseline; justify-content: center; gap: 14px; flex-wrap: wrap;
-}
-.ftf-core-1, .ftf-core-3 { font: 700 40px 'Osmose', 'Nunito', sans-serif; color: var(--cream); text-shadow: 0 4px 0 var(--ink), 0 8px 18px rgba(0, 0, 0, .5); }
-.ftf-core-3 { color: #FFE08A; }
-.ftf-core-2 { font: 600 21px 'Nunito Sans', sans-serif; color: #EFFFD2; text-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
-#ftf-fm-act {
-  position: absolute; right: 26px; bottom: 26px; display: flex; align-items: center; gap: 12px;
-  opacity: 0; transition: opacity 400ms ease;
-}
-#ftf-fm-act .ftf-btn { pointer-events: auto; }
-
-/* ================================================ ADVANCED ALGEBRA === */
-#ftf-adv { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }
-.ftf-adv-card { position: absolute; left: 40px; top: 172px; width: 520px; }
-.ftf-adv-in { padding: 18px 24px 18px; text-align: left; }
-.ftf-adv-row { opacity: 0; transition: opacity 420ms ease; margin-bottom: 12px; }
-.ftf-adv-row:last-child { margin-bottom: 0; }
-.ftf-adv-eq { font: 700 32px 'Nunito', sans-serif; color: #383882; }
-.ftf-adv-eq-a { color: #1D7070; }
-.ftf-adv-note { display: block; margin-top: 1px; font: 600 17px 'Nunito Sans', sans-serif; color: var(--cap); }
-.ftf-adv-last { padding-top: 14px; border-top: 2px solid #EFE0BE; }
-.ftf-adv-last > div { font: 800 21px 'Nunito', sans-serif; color: var(--ink); margin-bottom: 12px; }
-.ftf-adv-last .ftf-btn { pointer-events: auto; }
+/* The formula board and the algebra wall used to sit here, between the emblem
+   and the completion screen. Both were panels that told the student the result;
+   #ftf-live does the same job by letting them hold the fence instead. */
 
 /* ==================================================== COMPLETION === */
 #ftf-complete { position: absolute; inset: 0; z-index: 1000; display: none; pointer-events: none; }

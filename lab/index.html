@@ -16,11 +16,11 @@
 <div id="ftf-root">
   <div id="ftf-stage">
 
-    <img id="ftf-grass" class="ftf-ground" src="assets/art/grass-bg.png" alt="">
+    <img id="ftf-grass" class="ftf-ground" src="assets/art/grass-bg.webp" alt="">
     <!-- The second sheet of ground. It waits off the right edge and is seen
          only during the journey between farms, when both sheets slide left
          together. Same texture, so the swap back at the end is invisible. -->
-    <img id="ftf-grass-2" class="ftf-ground" src="assets/art/grass-bg.png" alt="" aria-hidden="true">
+    <img id="ftf-grass-2" class="ftf-ground" src="assets/art/grass-bg.webp" alt="" aria-hidden="true">
     <!-- Level lighting: the only thing that changes between farms (§level variation). -->
     <div id="ftf-light"></div>
     <div id="ftf-vig"></div>
@@ -146,16 +146,6 @@
       <div id="ftf-mascot-front"></div>
     </div>
 
-    <!-- One short question with two answers, used twice: to check that the
-         player noticed what stayed fixed, and to take their prediction before
-         the stretch experiment. Deliberately small and close under the sign -
-         a full-width quiz card would turn the farm into a worksheet. -->
-    <div id="ftf-ask" aria-live="polite">
-      <div id="ftf-ask-q">What stayed the same?</div>
-      <div id="ftf-ask-row"></div>
-      <div id="ftf-ask-fb"></div>
-    </div>
-
     <!-- Constant. Small, quiet, never animated (§UI hierarchy). -->
     <div id="ftf-fence-badge">
       <div class="ftf-card-in">
@@ -202,7 +192,7 @@
     <div id="ftf-title" data-screen-label="Title">
       <div class="ftf-title-top">
         <!-- The title is artwork; the h1 stays for screen readers and i18n. -->
-        <img id="ftf-logo" src="assets/art/title-logo.png" alt="">
+        <img id="ftf-logo" src="assets/art/title-logo.webp" alt="">
         <h1 class="ftf-sr" data-i18n="title.name">Fence the Farm</h1>
       </div>
       <div class="ftf-title-bottom">
@@ -231,99 +221,40 @@
     <div id="ftf-emblem">
       <div class="ftf-hay">
         <div class="ftf-hay-in">
-          <!-- Stated in the numbers they just made, not as a definition. The
-               old wording ("Balanced sides -> most area, with the same
-               rectangular perimeter") was a textbook line: true, and no help
-               to someone who had just dragged 13x3 up to 8x8. Their own climb
-               is the evidence, so their own climb is what it says. -->
+          <!-- Two lines, and the second is their own climb in their own
+               numbers. A third line spelling out the rule was dropped: it was
+               a textbook sentence long enough to widen the card into the
+               pasture, and it said nothing the two numbers above it did not
+               already show. This card is a bar along the bottom of the stage
+               now, so it can never sit on the fence. -->
           <div class="ftf-emb-1" data-i18n="final.strategy">You found it</div>
           <div class="ftf-emb-2" id="ftf-emb-sum">13 × 3 → 8 × 8</div>
-          <div class="ftf-emb-3" id="ftf-emb-rule">The closer the two sides, the more grass — same 32 m of fence</div>
         </div>
       </div>
       <button id="ftf-to-formula" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
     </div>
 
-    <!-- ================= FORMULA, IN THE FIELD ================= -->
+    <!-- ================= THE LIVE EXPLANATION ================= -->
     <!-- The interactive explanation. This replaces the three static panels that
          used to explain the idea: instead of reading that a fixed perimeter can
          hold different areas, the student holds the fence at 32 m and moves the
          shape themselves, and every number and the curve move with their hand.
          The strategy line is NOT printed here - it appears only if and when they
          land on the balanced shape on their own. -->
+    <!-- ONE number on this screen, and it is arithmetic, not algebra. The
+         earlier version stacked "L + W = 8 + 8 = 16", "A = 8 x 8 = 64 m²", a
+         three-part derivation and a two-line strategy caption on top of a
+         labelled graph - five pieces of text competing with the one thing that
+         actually teaches here, which is the shape moving under their hand. The
+         perimeter card already says FIXED, so the hint no longer repeats it. -->
     <div id="ftf-live" data-screen-label="Live relationship">
-      <div id="ftf-live-hint">Drag the corner. The perimeter cannot change.</div>
+      <div id="ftf-live-hint">Drag the corner.</div>
       <div id="ftf-live-eq">
-        <span id="ftf-live-lw">L + W = 16</span>
-        <span id="ftf-live-a">A = 8 × 8 = 64 m²</span>
+        <span id="ftf-live-a">8 × 8 = 64 m²</span>
       </div>
-      <div id="ftf-live-why">
-        <span class="ftf-why-eq">P = 2 (L + W)</span>
-        <span class="ftf-why-eq" id="ftf-why-2">32 = 2 (L + W)</span>
-        <span class="ftf-why-eq" id="ftf-why-3">L + W = 16</span>
-      </div>
-      <div id="ftf-live-strategy"><b>Balanced sides</b> give the most area<i>for the same perimeter</i></div>
+      <div id="ftf-live-strategy"><b>Balanced sides</b> give the most area</div>
       <div id="ftf-live-act">
-        <button id="ftf-live-whybtn" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.seeWhy">See why</button>
         <button id="ftf-live-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
-      </div>
-    </div>
-
-    <div id="ftf-fm" data-screen-label="Formula">
-      <div id="ftf-fm-per" class="ftf-fm-block">
-        <div class="ftf-fm-cap" data-i18n="formula.outside">Fence around the outside</div>
-        <div class="ftf-fm-eq ftf-fm-eq-p">P = 2 (L + W)</div>
-        <div id="ftf-fm-per-sub" class="ftf-fm-sub">P = 2 (8 + 8)</div>
-        <div id="ftf-fm-per-res" class="ftf-fm-res ftf-fm-res-p">P = 32 m</div>
-      </div>
-      <div id="ftf-fm-area" class="ftf-fm-block">
-        <div class="ftf-fm-cap" data-i18n="formula.inside">Grass inside</div>
-        <div class="ftf-fm-eq ftf-fm-eq-a">A = L × W</div>
-        <div id="ftf-fm-area-sub" class="ftf-fm-sub">A = 8 × 8</div>
-        <div id="ftf-fm-area-res" class="ftf-fm-res ftf-fm-res-a">A = 64 m²</div>
-      </div>
-      <div id="ftf-fm-core">
-        <span class="ftf-core-1" data-i18n="formula.fixedP">Fixed perimeter</span>
-        <span class="ftf-core-2" data-i18n="formula.doesNot">does not mean</span>
-        <span class="ftf-core-3" data-i18n="formula.fixedA">Fixed area</span>
-      </div>
-      <div id="ftf-fm-act">
-        <button id="ftf-see-why" type="button" class="ftf-btn ftf-btn-wood ftf-btn-sm ftf-focus" data-i18n="action.seeWhy">See why</button>
-        <button id="ftf-to-complete" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
-      </div>
-    </div>
-
-    <!-- ================= ADVANCED ALGEBRA ================= -->
-    <div id="ftf-adv" data-screen-label="Advanced">
-      <div class="ftf-hay ftf-adv-card">
-        <div class="ftf-hay-in ftf-adv-in">
-          <!-- The derivation, not just its result. A Grade 8-10 student can
-               reasonably ask "why 16 when the fence is 32?", so the halving is
-               shown happening instead of being asserted. -->
-          <div id="ftf-adv-0" class="ftf-adv-row">
-            <span class="ftf-adv-eq">P = 2L + 2W</span>
-            <span class="ftf-adv-note" data-i18n="adv.per">fence around the outside</span>
-          </div>
-          <div id="ftf-adv-0b" class="ftf-adv-row">
-            <span class="ftf-adv-eq">32 = 2L + 2W</span>
-            <span class="ftf-adv-note" data-i18n="adv.sub32">your fence</span>
-          </div>
-          <div id="ftf-adv-1" class="ftf-adv-row">
-            <span class="ftf-adv-eq">L + W = 16</span>
-            <span class="ftf-adv-note" data-i18n="adv.half">divide both sides by 2</span>
-          </div>
-          <div id="ftf-adv-2" class="ftf-adv-row">
-            <span class="ftf-adv-eq">W = 16 − L</span>
-            <span id="ftf-adv-sub" class="ftf-adv-note">L = 8 → W = 8</span>
-          </div>
-          <div id="ftf-adv-3" class="ftf-adv-row">
-            <span class="ftf-adv-eq ftf-adv-eq-a">A = L (16 − L)</span>
-          </div>
-          <div id="ftf-adv-4" class="ftf-adv-row ftf-adv-last">
-            <div data-i18n="adv.reveal">That curve is a parabola — its peak is your best build.</div>
-            <button id="ftf-adv-done" type="button" class="ftf-btn ftf-focus" data-i18n="action.continue">Continue</button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -381,11 +312,20 @@
 
     <!-- String source for keys with no permanent home in the markup. -->
     <div id="ftf-strings">
-      <span data-i18n="tut.reason">Same fence. More grass. Find out how.</span>
-      <span data-i18n="tut.per">Perimeter — 20 m of fence, locked</span>
-      <span data-i18n="tut.area">Area — the grass inside, L × W</span>
+      <!-- The hook, asked on the sign while the fence goes up around her. It
+           lived on the title screen for a moment and was moved here: the title
+           is a sign and a button, and EVERY line the game speaks belongs on the
+           instruction board, after Play, so there is one place copy ever
+           appears instead of two. -->
+      <span data-i18n="tut.hook">One fence. How much grass?</span>
+      <!-- The goal, stated once, before any vocabulary. It replaced a riddle
+           ("Same fence. More grass. Find out how.") that told the player what
+           the game was ABOUT without ever telling them what to do. -->
+      <span data-i18n="tut.reason">Same 20 m. Grow her field.</span>
+      <span data-i18n="tut.per">Perimeter: 20 m, locked</span>
+      <span data-i18n="tut.area">Area: the grass inside</span>
       <span data-i18n="tut.touch">Drag this corner</span>
-      <span data-i18n="tut.noticed">Area went up. Perimeter is still 20 m.</span>
+      <span data-i18n="tut.noticed">Area up. Fence still 20 m.</span>
       <span data-i18n="tut.more">Try another shape</span>
       <span data-i18n="tut.challenge">Find the maximum area</span>
       <span data-i18n="tut.success">Maximum area — 25 m²</span>
@@ -395,27 +335,13 @@
       <!-- Level 3 is framed as an EXPERIMENT, never as advice. "Stretch it
            longer" reads as a recommendation and would reinforce the very
            misconception the level exists to dislodge. -->
-      <span data-i18n="instruction.stretch">Test an idea: make the field longer</span>
+      <span data-i18n="instruction.stretch">Try it: make the field longer</span>
       <span data-i18n="instruction.mostGrass">Now find the maximum area</span>
       <span data-i18n="feedback.longerLess">Longer field. Less area.</span>
       <span data-i18n="feedback.tryMore">Better. Keep going.</span>
       <span data-i18n="record.new">New record — 33 m²</span>
       <span data-i18n="record.match">Record matched — 32 m²</span>
       <span data-i18n="hud.fixed">Fixed</span>
-      <!-- The tutorial check. Two answers, one question, no worksheet. -->
-      <span data-i18n="ask.same">What stayed the same?</span>
-      <span data-i18n="ask.fence">Fence length</span>
-      <span data-i18n="ask.area">Area</span>
-      <span data-i18n="ask.sameRight">Exactly — only the shape changed.</span>
-      <span data-i18n="ask.sameWrong">Look at the locked value.</span>
-      <!-- The Level 3 prediction. A hypothesis, so it is never marked. -->
-      <span data-i18n="ask.predict">What will happen to the area?</span>
-      <span data-i18n="ask.up">Increase</span>
-      <span data-i18n="ask.same2">Stay the same</span>
-      <span data-i18n="ask.down">Decrease</span>
-      <span data-i18n="ask.logged">Let us test it.</span>
-      <span data-i18n="predict.right">Your prediction matched the result.</span>
-      <span data-i18n="predict.wrong">Your experiment gave you the evidence.</span>
       <span data-i18n="success.r2">Record smashed!</span>
       <span data-i18n="success.r3">Longer was not more area.</span>
       <span data-i18n="success.r4">Master build.</span>
@@ -438,6 +364,10 @@
   <script src="js/game.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/goat.js"></script>
+  <!-- After goat.js: herd.js wraps goatTick, and reuses her sheets and geometry. -->
+  <script src="js/herd.js"></script>
+  <!-- After game.js: voice.js wraps vo() and clearTimers(). -->
+  <script src="js/voice.js"></script>
   <script src="js/instruct.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/finale.js"></script>

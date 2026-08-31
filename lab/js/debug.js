@@ -58,8 +58,7 @@ Object.assign(FenceTheFarm.prototype, {
 
     add('Final Compare', () => this.dbgFinaleAt('compare'));
     add('Final Peak',    () => this.dbgFinaleAt('peak'));
-    add('Formula',       () => { this.dbgSolo(); this.formulaScreen(); });
-    add('Advanced',      () => { this.dbgSolo(); this.advancedScreen(); });
+    add('Explain',       () => { this.dbgSolo(); this.explainScreen(); });
     add('Completion',    () => { this.dbgSolo(); this.completeScreen(); });
     add('Explore',       () => this.exploreScreen());
 
@@ -99,7 +98,7 @@ Object.assign(FenceTheFarm.prototype, {
   /* The solo 8 x 8 pasture that the formula and completion screens sit on. */
   dbgSolo() {
     this.el.title.style.display = 'none';
-    ['fin', 'fm', 'adv', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
+    ['fin', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
     this.el.emblem.style.display = 'none';
     this.clearTimers();
     this.dropAllPens({ instant: true });

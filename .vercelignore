@@ -35,3 +35,14 @@
 **/__*
 
 .git/
+
+# The PNG sources. Every image the game loads is now .webp - 17.9 MB of PNG
+# became 2.8 MB of WebP, an 84% cut, and the game references only .webp at
+# runtime. The PNGs stay in the repo so the art can be re-cut or re-encoded at a
+# different quality; they are never shipped.
+#
+# NOTE the same trap as the goat frames: match *.png ONLY. The .webp files are
+# the ones that must reach the browser, and several are named at runtime
+# ('assets/art/' + name + '.webp'), so a text search reports them as unused.
+*/assets/art/*.png
+*/assets/goat/*.png

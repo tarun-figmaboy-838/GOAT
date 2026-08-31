@@ -62,9 +62,9 @@ Object.assign(FenceTheFarm.prototype, {
      heading of due east needs the sprite turned back by a quarter turn. */
   SHEET: { content: 0.877, aspect: 0.5, faceDeg: 90 },
   CLIPS: {
-    walk:  { src: 'assets/goat/goat-walk.png',  fps: GOAT_CONFIG.walkFPS,  loop: true },
-    eat:   { src: 'assets/goat/goat-eat.png',   fps: GOAT_CONFIG.eatFPS,   loop: true },
-    bleat: { src: 'assets/goat/goat-bleat.png', fps: GOAT_CONFIG.bleatFPS, loop: false }
+    walk:  { src: 'assets/goat/goat-walk.webp',  fps: GOAT_CONFIG.walkFPS,  loop: true },
+    eat:   { src: 'assets/goat/goat-eat.webp',   fps: GOAT_CONFIG.eatFPS,   loop: true },
+    bleat: { src: 'assets/goat/goat-bleat.webp', fps: GOAT_CONFIG.bleatFPS, loop: false }
   },
   /* Which sheet, and which frame of it, each game state is drawn from. There is
      no idle sheet, so idle borrows the calmest walking frame - all four hooves
@@ -104,7 +104,25 @@ Object.assign(FenceTheFarm.prototype, {
      still finishes before the first fence post rises. */
   TILT: 1.05,
   BLEAT_PEAK: 2,                       // the widest mouth in the bleat sheet
-  GOAT_METRES: 1.30,                   // nose to rump
+  /* Nose to rump, and the ONE number that decides how big she reads.
+
+     She was 1.30, which is honest for a goat and far too small for a character:
+     on the screens whose cell is squeezed by a graph - the peak meter and the
+     live explanation - she came out about 50px on a 720px stage and read as a
+     speck in the middle of the field rather than as the animal the fence is
+     for. 2.00 is a deliberate 54% exaggeration.
+
+     What matters is not the value but that it is a CONSTANT. She still never
+     grows as the field becomes balanced, so none of the "more grass" impression
+     comes from her; the comparison the whole lesson rests on is untouched.
+
+     Swept against every legal shape of every farm before choosing: at 2.00 the
+     worst clearance on any pasture two metres or deeper is +16.8px (farm 4 at
+     13x3). One-metre pens cannot hold her at any size - they could not at 1.30
+     either - and there axisLock lays her along the long axis and she brushes
+     the rails. That is the single degenerate shape, and it is passed through
+     rather than dwelt in. Above 2.20 the real shapes start to fail too. */
+  GOAT_METRES: 2.00,
   /* Phases where she is free to wander; elsewhere the game is scripting her. */
   WANDER: { play: true, finale: true, complete: true, explore: true },
 
@@ -199,7 +217,14 @@ Object.assign(FenceTheFarm.prototype, {
     if (!p || !p.cell) return null;
     const L = (p === this.pens.main) ? this.g.L : p.L;
     const W = (p === this.pens.main) ? this.g.W : p.W;
-    if (!L || !W) return null;
+    return this.axisLockOf(p, L, W);
+  },
+  /* The same question asked of a NAMED pen rather than the active one. The
+     recap has two pastures on screen at once and they lock differently - a
+     10 x 2 start build pins its animals to the long axis while the 6 x 6 best
+     build lets them turn freely - so the herd in each needs its own answer. */
+  axisLockOf(p, L, W) {
+    if (!p || !p.cell || !L || !W) return null;
     const turnPad = this.goatTurnPad(p);
     const c = p.cell;
     const freeX = L * c >= 2 * turnPad, freeY = W * c >= 2 * turnPad;
@@ -388,7 +413,7 @@ class GoatController {
       if (this.sideFt >= rate) { this.sideFt = 0; this.sideFrame = (this.sideFrame + 1) % clip.length; }
       name = clip[this.sideFrame % clip.length];
     }
-    const src = 'assets/art/' + name + '.png';
+    const src = 'assets/art/' + name + '.webp';
     if (this.sideSrc !== src) { this.sideSrc = src; this.side.src = src; }
   }
 
@@ -486,7 +511,16 @@ class GoatController {
     const cruise = (G.state === 'enter' ? C.enterSpeed
       : (C.minWalkSpeed + C.maxWalkSpeed) / 2) * (cell / 72);
 
-    if (d < Math.max(2, cell * 0.05)) { this.arrive(); return; }
+    /* Arrival is measured along the axis she can actually TRAVEL. In a pasture
+       narrow enough to lock her heading she cannot close the other one at all,
+       so a destination with any off-axis component would leave her walking
+       toward it for ever - the state never ends, so she never grazes, never
+       looks up, and any beat waiting on her arrival waits for good. Every
+       caller that sets a target is covered by measuring it here rather than by
+       each of them having to know about the lock. */
+    const lock = G.state === 'enter' ? null : g.axisLock();
+    const reach = lock === 'x' ? Math.abs(dx) : lock === 'y' ? Math.abs(dy) : d;
+    if (reach < Math.max(2, cell * 0.05)) { this.arrive(); return; }
 
     // Turn to face the way she is about to go before she gets up to speed, so a
     // change of direction reads as a decision rather than a slide.
@@ -577,8 +611,15 @@ class GoatController {
     }
     /* In a pasture too narrow to turn around in, her safe area was worked out
        on the assumption that she lies along the long axis - so hold her to it,
-       or the clearance penBounds granted would be a fiction. */
-    const lock = this.game.axisLock();
+       or the clearance penBounds granted would be a fiction.
+
+       NOT during her walk-on, and not on the journey between farms. In both she
+       is deliberately OUTSIDE the pasture, walking toward it or past it, so a
+       lock derived from that pasture is meaningless - and pinning her heading to
+       one axis while her destination is off it means she can never reach it. The
+       walk-on ends by arriving; a walk-on that cannot arrive never fires
+       _enterDone, and the farm behind it never starts. */
+    const lock = (this.G.state === 'enter' || this.travelling) ? null : this.game.axisLock();
     if (lock) {
       const snap = lock === 'x' ? [0, 180] : [90, -90];
       let best = snap[0], bd = 1e9;

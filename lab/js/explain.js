@@ -8,10 +8,15 @@
    The pasture is real and the handle is live. The fence is pinned at the
    perimeter they finished with and visibly cannot change. As they drag:
 
-     the two side lengths change
-     L + W stays at half the perimeter, in front of them
-     the area is recomputed and shown
+     the shape changes under their hand
+     one pill reads the sum it is currently making - "8 × 8 = 64 m²"
      a token rides the area-against-length curve at their hand
+
+   Everything else that used to be printed here is gone: "L + W = 8 + 8 = 16",
+   a three-step derivation, a "See why" button to open it, and a two-line
+   strategy caption. Five pieces of text around one moving picture meant the
+   picture was the least of it. A screen you are meant to PLAY with must not
+   also be a screen you are meant to READ.
 
    And the strategy is never printed. It appears only if and when they land on
    the balanced shape themselves - which is the whole difference between being
@@ -31,7 +36,7 @@ Object.assign(FenceTheFarm.prototype, {
     const g = this.g, A = this.LIVE;
 
     // Everything that belonged to the old explanation screens goes away.
-    ['fin', 'fm', 'adv', 'complete', 'explore', 'title'].forEach(k => {
+    ['fin', 'complete', 'explore', 'title'].forEach(k => {
       if (this.el[k]) this.el[k].style.display = 'none';
     });
     this.el.emblem.style.display = 'none';
@@ -39,8 +44,6 @@ Object.assign(FenceTheFarm.prototype, {
     this.el.trace.style.opacity = '0';
     this.el.next.style.opacity = '0'; this.el.next.style.pointerEvents = 'none';
     this.retractPlank();
-    this.closeChoice();
-    this.el['live-why'].classList.remove('ftf-in');
     this.el['live-strategy'].classList.remove('ftf-in');
 
     this.stats.phase = 'explain';
@@ -90,13 +93,18 @@ Object.assign(FenceTheFarm.prototype, {
         this.moveGoatInside(true);
         this.setGoat('eat');
         this.render();
-        this.explainStep();
       });
       /* No floating side-length cards on this screen. The live pill already
-         reads "A = 7 x 9 = 63 m²", which states both sides - so the cards were
+         reads "7 x 9 = 63 m²", which states both sides - so the cards were
          duplicate information, and on a deep pen the W card landed on the
          graph while the L card collided with the strategy line. */
       this.showDims(false);
+      /* Exactly ONE draw of the readouts, and it happens before the fence
+         finishes building so the pills are never blank. It used to run here AND
+         again in the build callback, which is two draws with nothing changed
+         between them - and it meant the _liveMoves > 0 guard below, the only
+         thing stopping the opening shape being reported as a discovery, was
+         one line away from never being false. */
       this.explainStep();
     });
 
@@ -109,10 +117,11 @@ Object.assign(FenceTheFarm.prototype, {
   explainStep() {
     if (this.stats.phase !== 'explain') return;
     const g = this.g, area = g.L * g.W;
-    this.el['live-lw'].textContent = 'L + W = ' + g.L + ' + ' + g.W + ' = ' + g.half;
-    this.el['live-a'].textContent = 'A = ' + g.L + ' × ' + g.W + ' = ' + area + ' m²';
-    this.el['why-2'].textContent = g.perimeter + ' = 2 (L + W)';
-    this.el['why-3'].textContent = 'L + W = ' + g.half;
+    /* One readout, and it is arithmetic. "L + W = 8 + 8 = 16" and the three-step
+       derivation under it were algebra ABOUT the picture, printed beside the
+       picture - so the screen asked to be read when it wanted to be played
+       with. What is left is the sum the shape is currently making. */
+    this.el['live-a'].textContent = g.L + ' × ' + g.W + ' = ' + area + ' m²';
     this.advCurve();
     /* The peak label names the peak, so it belongs to the peak: it used to be
        written once and left up, which meant the screen claimed "A = 64" while
@@ -124,18 +133,15 @@ Object.assign(FenceTheFarm.prototype, {
     if (g.L === g.W && !this._liveFound && this._liveMoves > 0) {
       this._liveFound = true;
       this.el['live-strategy'].classList.add('ftf-in');
-      this.el['curve-peak'].textContent = g.L + ' × ' + g.W + ' = ' + area + ' m² — the most from ' + g.perimeter + ' m';
+      // The pill already reads "8 × 8 = 64 m²", so the peak marker says what the
+      // pill cannot: that this one is the best there is.
+      this.el['curve-peak'].textContent = 'Most area';
       this.el['curve-peak'].style.opacity = '1';
       this.sfx('success_chord');
       this.setGoat('happy');
       this.track('explain_peak_found', { moves: this._liveMoves });
     }
     this._liveMoves++;
-  },
-
-  explainWhy() {
-    this.el['live-why'].classList.toggle('ftf-in');
-    this.track('explain_why_opened', {});
   }
 });
 

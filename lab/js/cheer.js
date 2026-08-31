@@ -28,9 +28,6 @@ Object.assign(FenceTheFarm.prototype, {
     const safeThen = then && (() => { if (this._cheerGen === gen) then(); });
 
     this.lockInput(true);
-    // A question left open would sit on top of her; put it away rather than
-    // merely fading it.
-    this.closeChoice();
     this.el.field.classList.add('ftf-defocus');
     this.root.classList.add('ftf-cheering');     // everything but the goat goes
     /* Her field self is hidden with display, not opacity: opacity is
@@ -47,9 +44,9 @@ Object.assign(FenceTheFarm.prototype, {
     let handed = false;
     const done = () => { if (handed) return; handed = true; this.endCelebration(safeThen); };
     this.mascot().playLevelComplete(done);
-    // Comfortably past the 8s performance: this is a safety net for a
+    // Comfortably past the 5s performance: this is a safety net for a
     // controller that somehow never reports finishing, not the usual path.
-    this.afterKeep(9200, done);
+    this.afterKeep(6200, done);
   },
 
   endCelebration(then) {
@@ -82,7 +79,12 @@ Object.assign(FenceTheFarm.prototype, {
 (function (proto) {
   const succeed = proto.levelSucceed;
   proto.levelSucceed = function () {
-    this.playGoatCelebration(() => succeed.call(this));
+    /* Order matters: the farm comes back into focus, THEN its own success beats
+       play on it - the fence settles, she hops, the grass puffs, the side
+       lengths are revealed - and only then does the level explain itself.
+       succeed() used to schedule those beats itself, which put them behind the
+       celebration's blur. */
+    this.playGoatCelebration(() => { this.succeedField(); succeed.call(this); });
   };
   // Each farm gets its own single celebration.
   const reset = proto.levelReset;

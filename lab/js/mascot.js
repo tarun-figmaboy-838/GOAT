@@ -20,15 +20,16 @@
    ========================================================================== */
 
 const CELEBRATION_CONFIG = {
+  duration: 5000,          // the whole performance, start to still
   jumpHeight: 52,          // px at the design scale; scaled down on small stages
   peakHold: 240,
   landingSquash: 240,
   particleCount: 22,
   sparkleCount: 7,
-  showerCount: 72,         // falling confetti, spread over the back half
-  showerSpread: 4200,      // spawned in waves across this long, never at once
+  showerCount: 56,         // falling confetti, spread across the performance
+  showerSpread: 2600,      // spawned in waves across this long, never at once
   ringDuration: 760,
-  crossfade: 100,          // pose-to-pose dissolve; longer ghosts, shorter pops
+  crossfade: 150,          // pose-to-pose dissolve; longer ghosts, shorter pops
   rollChance: 1 / 7,       // how often the playful tumble replaces the ending
   idleBreath: 5200
 };
@@ -38,17 +39,17 @@ const CELEBRATION_CONFIG = {
    every pose on one line. `scale` is left at 1 - the poses were drawn at one
    character size and rescaling them would break that. */
 const GOAT_POSES = {
-  idle:      { src: 'goat-cheer (9).png',  ground: 0.994 },
-  look:      { src: 'goat-cheer (3).png',  ground: 0.967 },
-  crouch:    { src: 'goat-cheer (10).png', ground: 0.912 },
-  hop:       { src: 'goat-cheer (4).png',  ground: 0.966 },
-  jump:      { src: 'goat-cheer (5).png',  ground: 0.990 },
-  wave:      { src: 'goat-cheer (6).png',  ground: 0.980 },
-  wink:      { src: 'goat-cheer (7).png',  ground: 0.985 },
-  bigCheer:  { src: 'goat-cheer (8).png',  ground: 0.993 },
-  cheer:     { src: 'goat-cheer (11).png', ground: 0.992 },
-  sit:       { src: 'goat-cheer (2).png',  ground: 0.988 },
-  roll:      { src: 'goat-cheer (1).png',  ground: 0.871 }
+  idle:      { src: 'goat-cheer (9).webp',  ground: 0.994 },
+  look:      { src: 'goat-cheer (3).webp',  ground: 0.967 },
+  crouch:    { src: 'goat-cheer (10).webp', ground: 0.912 },
+  hop:       { src: 'goat-cheer (4).webp',  ground: 0.966 },
+  jump:      { src: 'goat-cheer (5).webp',  ground: 0.990 },
+  wave:      { src: 'goat-cheer (6).webp',  ground: 0.980 },
+  wink:      { src: 'goat-cheer (7).webp',  ground: 0.985 },
+  bigCheer:  { src: 'goat-cheer (8).webp',  ground: 0.993 },
+  cheer:     { src: 'goat-cheer (11).webp', ground: 0.992 },
+  sit:       { src: 'goat-cheer (2).webp',  ground: 0.988 },
+  roll:      { src: 'goat-cheer (1).webp',  ground: 0.871 }
 };
 const POSE_BASE = 'assets/goat/';
 const POSE_GROUND = 0.994;        // the line every pose is aligned to
@@ -128,14 +129,19 @@ class GoatMascotController {
      One choreographed timeline. The character beats are fixed - only the
      particles are random - because a mascot that moves unpredictably reads as
      broken rather than as lively. */
-  /* Eight seconds of continuous performance. The point is that she is ALWAYS
-     doing something: a pose lands roughly every 600ms and the wrapper is moving
-     between them, so it reads as one animated character rather than as a short
-     burst followed by a wait. Every beat is transform and opacity only, and the
-     poses are preloaded, so nothing has to be fetched or laid out mid-sequence.
+  /* FIVE seconds of continuous performance. The point is that she is ALWAYS
+     doing something: every move() lasts until the next one starts, so the
+     wrapper is never sitting still between poses. A wrapper that stops moving
+     for 300ms is the single thing that makes a recording of this look stuttery,
+     and dead air between beats is what makes eleven poses read as a slideshow
+     rather than as one animal.
 
-     Two jumps, not one: a big leap with the confetti, then a smaller, happier
-     second hop. That is what stops the back half feeling like padding. */
+     It ran for eight seconds and had two jumps - a big leap, then a smaller
+     hop to stop the back half feeling like padding. At five seconds there is no
+     back half to pad, so it is one leap, one flourish and a settle, and the
+     second hop is gone rather than compressed. Every beat is transform and
+     opacity only, and the poses are preloaded, so nothing is fetched or laid
+     out mid-sequence. */
   playLevelComplete(then) {
     if (this.busy) return;
     this.busy = true;
@@ -146,6 +152,7 @@ class GoatMascotController {
     const OUT = 'cubic-bezier(.15,.8,.3,1)';     // rising  - power3.out
     const IN  = 'cubic-bezier(.5,0,.85,.5)';     // falling - power2.in
     const BACK = 'cubic-bezier(.34,1.5,.64,1)';  // recovery - back.out
+    const EASE = 'cubic-bezier(.45,.05,.55,.95)'; // sine - for the float and the sway
 
     this.setPose('idle', true);
     this.rest();
@@ -159,67 +166,49 @@ class GoatMascotController {
       return;
     }
 
-    /* ---- 0.0-1.0  she notices, and gathers herself ------------------- */
-    this.at(90,   () => { this.move(0, 1.05, 0.96, 0, 150); this.g.sfx('chime'); });
-    this.at(260,  () => { this.setPose('look'); this.move(0, 1, 1, 0, 160); });
-    this.at(560,  () => this.setPose('crouch'));
-    this.at(620,  () => this.move(7, 1.06, 0.94, 0, 260, IN));
+    /* ---- 0.00-0.64  she notices, and gathers -------------------------- */
+    this.at(0,    () => { this.move(0, 1.04, 0.96, 0, 180); this.g.sfx('chime'); });
+    this.at(180,  () => { this.setPose('look'); this.move(0, 1, 1, 0, 200); });
+    this.at(380,  () => { this.setPose('crouch'); this.move(9, 1.07, 0.93, 0, 260, IN); });
 
-    /* ---- 1.0-2.4  the leap, the burst, the peak ---------------------- */
-    this.at(940,  () => { this.g.sfx('cheer_jump'); this.move(-H, 1, 1.06, -3, 360, OUT); });
-    this.at(1000, () => this.setPose('jump'));
-    this.at(1320, () => {
-      this.move(-H - 10, 1.02, 1.03, 2, 260, 'cubic-bezier(.3,.6,.4,1)');
+    /* ---- 0.64-1.90  the leap, the burst, the float -------------------- */
+    this.at(640,  () => { this.g.sfx('cheer_jump'); this.setPose('jump'); this.move(-H, 1, 1.06, -3, 380, OUT); });
+    this.at(1020, () => {
+      this.move(-H - 10, 1.02, 1.03, 2, 280, 'cubic-bezier(.3,.6,.4,1)');
       this.burst(C.particleCount); this.ring(); this.g.sfx('success_chord');
-      // And the shower starts here, running under the whole back half.
       this.shower(C.showerCount, C.showerSpread);
     });
-    this.at(1400, () => { this.setPose('bigCheer'); this.g.sfx('bell_ding'); });
-    // She never freezes mid-air: the peak is a slow float, not a held frame.
-    // A wrapper that stops moving for 300ms is the single thing that makes a
-    // recording of this look stuttery.
-    this.at(1580, () => this.move(-H - 6, 1.01, 1.02, 0, 330, 'cubic-bezier(.45,.05,.55,.95)'));
-    this.at(1650, () => this.sparkles(C.sparkleCount));
-    this.at(1900, () => this.move(-H - 4, 1, 1.02, -2, 300, 'cubic-bezier(.4,0,.6,1)'));
+    this.at(1300, () => { this.setPose('bigCheer'); this.g.sfx('bell_ding'); this.move(-H - 6, 1.01, 1.02, 0, 300, EASE); });
+    this.at(1600, () => { this.sparkles(C.sparkleCount); this.move(-H - 2, 1, 1.02, -2, 300, EASE); });
 
-    /* ---- 2.4-3.4  down, and the landing ------------------------------ */
-    this.at(2280, () => this.move(0, 1, 1, 0, 340, IN));
-    this.at(2620, () => { this.move(0, 1.07, 0.91, 0, 120, 'cubic-bezier(.3,0,.2,1)'); this.dust(); this.g.sfx('cheer_land'); });
-    this.at(2740, () => this.move(0, 0.97, 1.05, 0, 150, BACK));
-    this.at(2890, () => { this.setPose('wink'); this.move(0, 1, 1, 0, 160); });
-    // A gentle sway bridges the wink and the second hop - again, no dead air.
-    this.at(3060, () => this.move(0, 1.01, 0.99, 1.5, 340, 'cubic-bezier(.45,.05,.55,.95)'));
+    /* ---- 1.90-2.65  down, and the landing ----------------------------- */
+    this.at(1900, () => this.move(0, 1, 1, 0, 320, IN));
+    this.at(2220, () => { this.move(0, 1.08, 0.90, 0, 110, 'cubic-bezier(.3,0,.2,1)'); this.dust(); this.g.sfx('cheer_land'); });
+    this.at(2330, () => this.move(0, 0.97, 1.05, 0, 150, BACK));
+    this.at(2480, () => { this.setPose('wink'); this.move(0, 1, 1, 0, 170); });
 
-    /* ---- 3.4-4.8  a second, smaller hop - pure delight --------------- */
-    this.at(3400, () => { this.setPose('hop'); this.move(-26, 1, 1.03, -2, 260, OUT); });
-    this.at(3700, () => this.sparkles(4));
-    this.at(3760, () => this.move(0, 1.05, 0.95, 0, 240, IN));
-    this.at(4000, () => this.move(0, 1, 1, 0, 160, BACK));
-    this.at(4120, () => { this.setPose('cheer'); this.move(-8, 1, 1.02, 3, 240); });
-    this.at(4520, () => this.move(0, 1, 1, -3, 280));
-
-    /* ---- 4.8-6.4  the flourish. Usually a wave; sometimes she tips over
-           laughing, which is the surprise that stops it feeling scripted. */
-    const roll = Math.random() < C.rollChance;
-    if (roll) {
-      this.at(4900, () => { this.setPose('roll'); this.move(6, 1.03, 0.97, -5, 300, BACK); });
-      this.at(5200, () => this.g.sfx('bleat'));
-      this.at(5500, () => this.move(4, 1, 1, 4, 420, 'cubic-bezier(.4,0,.4,1)'));
-      this.at(5950, () => { this.setPose('wave'); this.move(-14, 1, 1.02, 0, 300, OUT); this.sparkles(4); });
-      this.at(6350, () => this.move(0, 1, 1, 0, 260, IN));
+    /* ---- 2.65-4.30  a sway, then the flourish. Usually a wave; sometimes
+           she tips over laughing, which is the surprise that stops it
+           feeling scripted. */
+    this.at(2650, () => this.move(0, 1.01, 0.99, 1.5, 350, EASE));
+    if (Math.random() < C.rollChance) {
+      this.at(3000, () => { this.setPose('roll'); this.move(6, 1.03, 0.97, -5, 300, BACK); });
+      this.at(3300, () => { this.g.sfx('bleat'); this.move(4, 1, 1, 4, 360, EASE); });
+      this.at(3660, () => { this.setPose('wave'); this.move(-14, 1, 1.02, 0, 300, OUT); this.sparkles(4); });
+      this.at(3960, () => this.move(0, 1, 1, 0, 340, IN));
     } else {
-      this.at(4900, () => { this.setPose('wave'); this.move(-16, 1, 1.03, -3, 300, OUT); this.sparkles(4); });
-      this.at(5300, () => this.move(0, 1.04, 0.96, 0, 240, IN));
-      this.at(5560, () => this.move(0, 1, 1, 0, 160, BACK));
-      this.at(5720, () => { this.setPose('sit'); this.move(0, 1, 1, 2, 260); });
-      this.at(6150, () => this.move(0, 1, 1, -2, 320));
+      this.at(3000, () => { this.setPose('wave'); this.move(-16, 1, 1.03, -3, 300, OUT); this.sparkles(4); });
+      this.at(3300, () => this.move(0, 1.04, 0.96, 0, 240, IN));
+      this.at(3540, () => this.move(0, 1, 1, 0, 160, BACK));
+      this.at(3700, () => { this.setPose('sit'); this.move(0, 1, 1, 2, 300); });
+      this.at(4000, () => this.move(0, 1, 1, -2, 300));
     }
 
-    /* ---- 6.4-8.0  she settles. A slow breath, then still ------------- */
-    this.at(6600, () => { this.setPose('look'); this.move(0, 1, 1, 0, 300); });
-    this.at(7050, () => this.move(-4, 1, 1.012, 0, 520, 'cubic-bezier(.4,0,.4,1)'));
-    this.at(7420, () => { this.setPose('idle'); this.move(0, 1, 1, 0, 480, 'cubic-bezier(.4,0,.4,1)'); });
-    this.at(7950, () => this.finish(then));
+    /* ---- 4.30-5.00  she settles. A slow breath, then still ------------ */
+    this.at(4300, () => { this.setPose('look'); this.move(0, 1, 1, 0, 300); });
+    this.at(4600, () => this.move(-4, 1, 1.012, 0, 400, EASE));
+    this.at(4820, () => this.setPose('idle'));
+    this.at(C.duration, () => this.finish(then));
   }
 
   /* A quick, cheap reaction for an ordinary correct move. */

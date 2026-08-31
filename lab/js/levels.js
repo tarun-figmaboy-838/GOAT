@@ -22,11 +22,9 @@ Object.assign(FenceTheFarm.prototype, {
     this.lv = {
       record: r.record || 0, beaten: false, matched: false, flagged: false,
       stretched: false, flipped: false, longest: r.start[0], pausedAt: 0,
-      prediction: null,
       precise: true,            // mastery sets it false while its target is open
       tutBeat: 0, tutMoves: 0, tutNoticed: false
     };
-    this.closeChoice();
     this.spotlight(null);       // a new farm never inherits the intro's veil
   },
 
@@ -79,6 +77,7 @@ Object.assign(FenceTheFarm.prototype, {
       this.setGoat('happy');
       this.bump(this.el['area-val'], 'ftf-pop', 420);
       this.plankSay(this.t('feedback.exact').replace('48', String(target)));
+      this.vo('vo.exact');
       this.after(this.noMotion() ? 0 : 1900, () => {
         if (this.stats.phase !== 'play') return;
         this.plankSay(this.t('mastery.max'));
@@ -160,32 +159,59 @@ Object.assign(FenceTheFarm.prototype, {
     if (F) F.call(this);
   },
 
-  /* Beat 1 — give the player a reason. Only the goat is alive. */
+  /* Beat 1 — the FENCE, and the problem it makes. Nothing is said.
+
+     This beat used to assert "give her more grass" over an empty lawn: the
+     fence was not built until beat 2, so the cramped field the line was about
+     was not on screen while the line was being read. The picture comes first
+     now. The posts rise around her, she walks the length of the strip - which
+     is what makes 8 x 2 read as long and thin rather than merely small - and
+     only then does anything speak. */
   tut1() {
-    this.plankDrop(this.t('tut.reason'));
+    // The hook, asked while the fence is going up around her. It was briefly a
+    // line on the title screen; every line the game speaks belongs on this one
+    // board, after Play, so copy never has two homes.
+    this.plankDrop(this.t('tut.hook'));
+    this.vo('vo.hook');
+    this.buildFence(1150, () => {
+      if (this.tutorialSeen()) this.el.skip.classList.add('ftf-in');
+      const b = this.bounds();
+      this.goat.tx = b[1]; this.goat.ty = (b[2] + b[3]) / 2;
+      this.setGoat('walk');
+      this.after(this.noMotion() ? 0 : 1200, () => this.tutBeat(2));
+    });
+  },
+
+  /* Beat 2 — THE GOAL, in one sentence, before a word of vocabulary.
+
+     This line used to be a riddle - "Same fence. More grass. Find out how." -
+     and the player then met two definitions before ever being told what they
+     were trying to achieve. The objective did not arrive until beat 7, by which
+     point they had been dragging for a while and had worked it out or not. It
+     is the first thing said now.
+
+     Then the interface is introduced: the stage dims and the two ideas the game
+     runs on are pointed at one at a time, in the real UI, each arriving WITH
+     its own card rather than after both cards are already up. Perimeter first -
+     the tracer walks the fence while its card is lit - then area, counted in
+     square metres. Skipping remains available throughout. */
+  tut2() {
+    this.plankDrop(this.t('tut.reason').replace('20', String(this.g.perimeter)));
     this.pulseOnly('goat');
     this.vo('vo.reason');
     this.setGoat('talk');
     this.after(this.noMotion() ? 0 : 900, () => this.setGoat('eat'));
-    this.after(this.noMotion() ? 0 : 2100, () => this.tutBeat(2));
-  },
-
-  /* Beat 2 — the fence is built, then the interface is INTRODUCED: the stage
-     dims and the two ideas the whole game runs on are pointed at, one at a
-     time, in the real UI. Perimeter first - the tracer walks the fence while
-     its card is lit - then area, with the grass and its card lit. Only after
-     both does the corner get taught. Skipping remains available throughout. */
-  tut2() {
-    this.buildFence(1150, () => {
-      this.showNumbers(true);
-      if (this.tutorialSeen()) this.el.skip.classList.add('ftf-in');
-      this.after(this.noMotion() ? 200 : 900, () => this.tutIntroFence());
-    });
+    this.after(this.noMotion() ? 300 : 2600, () => this.tutIntroFence());
   },
   /* "This is your fence." The field and the fence card lift out of the dim,
      and the measuring light walks the perimeter while the player watches. */
   tutIntroFence() {
     if (this.lv.tutBeat !== 2) return;
+    this.pulseOnly(null);
+    /* One card at a time, and each arrives WITH the idea it belongs to. Both
+       used to be revealed a beat earlier, which put two unexplained numbers on
+       screen while the first of them was being explained. */
+    this.el['fence-badge'].style.opacity = '1';
     this.spotlight(['field', 'trace', 'fence-badge']);
     this.el['fence-badge'].classList.add('ftf-beacon');
     this.plankSay(this.t('tut.per').replace('20', String(this.g.perimeter)));
@@ -197,13 +223,20 @@ Object.assign(FenceTheFarm.prototype, {
     this.after(this.noMotion() ? 900 : 3300, () => this.tutIntroArea());
   },
   /* "The grass inside is the area." The fill sweeps once while its card is
-     lit; the fence drops back into the dim so only one idea is on stage. */
+     lit; the fence drops back into the dim so only one idea is on stage.
+
+     And the area is COUNTED, not just named. The metre grid the drag already
+     uses is turned up for this beat and the card runs 0 -> 16 alongside it, so
+     what the player sees is sixteen squares being counted rather than a word
+     with a number beside it. Naming a quantity and showing it are not the same
+     lesson, and this one is cheap: both the grid and countUp already exist. */
   tutIntroArea() {
     if (this.lv.tutBeat !== 2) return;
     this.el.trace.style.opacity = '0';
     this.spotlight(['field', 'area-card']);
     // The fence steps back while the inside is the subject.
     this.el.modules.classList.add('ftf-fade');
+    this.el['area-card'].style.opacity = '1';
     this.el['area-card'].classList.add('ftf-beacon');
     this.plankSay(this.t('tut.area'));
     this.vo('vo.area');
@@ -213,13 +246,21 @@ Object.assign(FenceTheFarm.prototype, {
        inside still reads dim. It is held bright for the whole beat - the
        subject of this beat is the inside - and eased back only when the veil
        lifts and render() restores the colour play actually uses. */
-    const f = this.el.fill;
+    const f = this.el.fill, area = this.g.L * this.g.W;
     f.style.transition = this.noMotion() ? 'none' : 'background 500ms ease';
-    this.after(this.noMotion() ? 0 : 60, () => { f.style.background = 'rgba(168,236,96,.66)'; });
+    this.el.grid.style.opacity = '.3';
+    this.after(this.noMotion() ? 0 : 60, () => {
+      f.style.background = 'rgba(168,236,96,.66)';
+      this.el['area-val'].textContent = '0';
+      this.countUp(this.el['area-val'], area, this.noMotion() ? 0 : 1300);
+    });
     this.after(this.noMotion() ? 900 : 3000, () => {
       if (this.lv.tutBeat !== 2) return;
       this.spotlight(null);
       this.el.modules.classList.remove('ftf-fade');
+      // The grid goes back to whatever the snap-guide option asks for.
+      this.el.grid.style.opacity = this.options.snapGuide === 'Always' ? '.1' : '0';
+      this.el['area-val'].textContent = String(area);
       f.style.transition = 'background 900ms ease';
       this.render({ instant: true });
       this.beginPlay();
@@ -258,11 +299,18 @@ Object.assign(FenceTheFarm.prototype, {
     this.setGoat('happy');
     this.after(this.noMotion() ? 0 : 2200, () => { if (this.lv.tutBeat === 5) this.tutBeat(6); });
   },
+  /* The check. The whole lesson turns on noticing that the perimeter did NOT
+     move while the area did, so it is worth one short question rather than one
+     more sentence they can read past. A wrong pick is not a failure state: the
+     locked card pulses, and they look again.
 
+     If they never answer - or take hold of the corner instead - the beat carries
+     on regardless. It is a check, not a gate. */
   /* Beat 6 — invite the mistake. Free dragging, no steering. */
   tut6() {
     this.pulseOnly(null);
     this.plankSay(this.t('tut.more'));
+    this.vo('vo.more');
     this.lv.tutMoves = 0;
   },
 
@@ -271,6 +319,7 @@ Object.assign(FenceTheFarm.prototype, {
     this.pulseOnly(null);
     this.hideHint();
     this.plankSay(this.t('tut.challenge'));
+    this.vo('vo.challenge');
   },
 
   /* Beat 8 — success. */
@@ -344,9 +393,14 @@ Object.assign(FenceTheFarm.prototype, {
     this.el.skip.classList.remove('ftf-in');
     this.hideHint();
     this.clearTimers();
-    // Skipping mid-intro must put the lights back on.
+    /* Skipping mid-intro must put back EVERYTHING the intro borrowed: the
+       lights, the tracer, the dimmed fence, and the metre grid the area beat
+       turns up. Leaving any of them meant a skipped tutorial started with the
+       grid on or the fence still faded. */
     this.spotlight(null);
     this.el.trace.style.opacity = '0';
+    this.el.modules.classList.remove('ftf-fade');
+    this.el.grid.style.opacity = this.options.snapGuide === 'Always' ? '.1' : '0';
     if (this.stats.phase !== 'play') {
       this.buildFence(0, () => { this.showNumbers(false); this.beginPlay(); this.tutBeat(7); });
     } else this.tutBeat(7);
@@ -461,15 +515,8 @@ Object.assign(FenceTheFarm.prototype, {
       this.plankFlip(this.t('instruction.mostGrass'));
       this.vo('vo.didLonger');
       this.musicTier(1);
-      this.track('misconception_result_seen', { prediction: this.lv.prediction || null });
+      this.track('misconception_result_seen', {});
     });
-  },
-  /* Whether they guessed right or not, the point is that they now have
-     evidence. A wrong prediction is never called wrong - it is the reason the
-     experiment was worth running. */
-  predictVerdict() {
-    if (!this.lv.prediction) return null;
-    return this.t(this.lv.prediction === 'down' ? 'predict.right' : 'predict.wrong');
   },
   trapSucceed() {
     const g = this.g;
@@ -477,9 +524,6 @@ Object.assign(FenceTheFarm.prototype, {
     // start - so the recap answers the question the level asked them.
     const L2 = this.lv.longest, W2 = g.half - L2;
     this.after(620, () => this.plankSay(this.t("success.r3")));
-    // Close the loop on the prediction they committed to before the experiment.
-    const verdict = this.predictVerdict();
-    if (verdict) this.after(1500, () => this.showBanner(verdict, 1800));
     // Long enough to actually READ the revealed measurements before the recap.
     this.after(5200, () => {
       this.compareBuilds([L2, W2], [g.L, g.W], g.perimeter, {
@@ -575,6 +619,7 @@ Object.assign(FenceTheFarm.prototype, {
   masterySucceed() {
     this.after(700, () => {
       this.plankSay(this.t('success.r4'));
+      this.vo('vo.master');
       this.showDims(true);
     });
     this.after(1500, () => this.offerNext('action.reveal'));

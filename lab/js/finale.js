@@ -1,14 +1,18 @@
 /* ============================================================================
    FENCE THE FARM — the finale
-   An interactive proof, not a textbook page. Five phases, all on the same
-   grass, then the formulas emerge from the field itself.
+   An interactive proof, not a textbook page. Four phases, all on the same
+   grass, and then the explanation - which is also on the same grass.
 
      1  replay the two builds side by side
      2  trace both perimeters at one speed - they finish together
      3  fill both interiors and count the grass up
      4  hand the fence back and let the player find the peak on a meter
-     5  P and A resolve on the field, then FIXED PERIMETER != FIXED AREA
-        + an optional SEE WHY that turns the meter into a real graph
+
+   Phase 5 used to live here too: a formula board, then an optional algebra
+   wall. Both were screens that TOLD the student the result. They are gone, and
+   explain.js has the job instead - one live screen where the perimeter is
+   pinned, the handle works, and every number moves with their hand. advCurve()
+   stayed behind because that screen draws its graph with it.
    ========================================================================== */
 Object.assign(FenceTheFarm.prototype, {
 
@@ -76,8 +80,8 @@ Object.assign(FenceTheFarm.prototype, {
        did. Centre it on the real gap instead. */
     this.el.next.classList.add("ftf-mid");
     const aR = ax + wA / 2 + 160, bL = bx + wB / 2 - 160;   // facing card edges
-    const mid = Math.max(160, Math.min(1120, (aR + bL) / 2));
-    this.el.next.style.left = Math.round(mid - 112) + 'px';
+    // offerNext centres the button on this once it knows its own width.
+    this._nextMid = Math.max(160, Math.min(1120, (aR + bL) / 2));
     this.el.next.style.marginLeft = '0';
     this.el['fin-a-lbl'].querySelector('.ftf-cmp-tag').textContent = this.t(opts.tagA || 'final.startBuild');
     this.el['fin-b-lbl'].querySelector('.ftf-cmp-tag').textContent = this.t(opts.tagB || 'final.bestBuild');
@@ -99,7 +103,15 @@ Object.assign(FenceTheFarm.prototype, {
 
       this.el['fa-dims'].textContent = A[0] + ' × ' + A[1] + ' m';
       this.el['fb-dims'].textContent = B[0] + ' × ' + B[1] + ' m';
-      this.after(this.noMotion() ? 0 : 560, () => {
+      /* Wait for the fence the tracer is about to measure to actually BE there.
+         The labels and the tracer used to run on fixed 560ms / +460ms timers
+         while the build takes stagger x 2P + 210 - which is comfortably shorter
+         at every perimeter, so it worked, but only by arithmetic that nothing
+         checked. Deriving the wait from the same stagger the build was given
+         means a measuring light can never walk a half-built fence, whatever the
+         perimeter and however slow the device. */
+      const built = this.noMotion() ? 0 : st * 2 * perimeter + 210;
+      this.after(this.noMotion() ? 0 : Math.max(560, built + 120), () => {
         this.el['fin-a-lbl'].style.opacity = '1';
         this.el['fin-b-lbl'].style.opacity = '1';
         this.after(this.noMotion() ? 0 : 460, () => this.finaleTrace(perimeter));
@@ -312,7 +324,7 @@ Object.assign(FenceTheFarm.prototype, {
     this.after(200, () => { this.goat.jump = 0.55; this.setGoat('happy'); });
     this.after(320, () => {
       this.sfx('success_chord');
-      this.el['curve-peak'].textContent = 'L = ' + g.L + ' · W = ' + g.W + ' · A = ' + (g.L * g.W);
+      this.el['curve-peak'].textContent = g.L + ' × ' + g.W + ' = ' + (g.L * g.W) + ' m²';
       this.el['curve-peak'].style.opacity = '1';
       this.musicTier(4);
     });
@@ -323,62 +335,14 @@ Object.assign(FenceTheFarm.prototype, {
       this.el['emb-sum'].textContent =
         r.start[0] + ' × ' + r.start[1] + ' = ' + (r.start[0] * r.start[1]) + ' m²' +
         '   →   ' + g.L + ' × ' + g.W + ' = ' + (g.L * g.W) + ' m²';
-      this.el['emb-rule'].textContent =
-        'The closer the two sides, the more grass — same ' + g.perimeter + ' m of fence';
-      this.el.emblem.style.display = 'block';
+      // flex, not block: the card and the way-on sit side by side in one bar.
+      this.el.emblem.style.display = 'flex';
       if (!this.noMotion()) this.el.emblem.style.animation = 'ftf-fadein 520ms ease';
       this.sfx('record_success');
     });
     this.track('peak_found', { area: g.L * g.W });
   },
 
-  /* ------------------------------------------------------------- phase 5 --
-     The formulas resolve on the field that is still standing. */
-  formulaScreen() {
-    this.closeLive();
-    this.clearTimers();
-    this.stats.phase = 'formula';
-    const g = this.g;
-    this.el.emblem.style.display = 'none';
-    this.el.curve.style.opacity = '0';
-    this.el['curve-peak'].style.opacity = '0';
-    this.showHandle(false);
-    this.el.fm.style.display = 'block';
-    ['fm-per', 'fm-area'].forEach(k => { this.el[k].style.opacity = '0'; });
-    this.el['fm-core'].style.opacity = '0';
-    this.el['fm-act'].style.opacity = '0';
-    ['fm-per-sub', 'fm-area-sub'].forEach(k => { this.el[k].style.opacity = '0'; });
-    ['fm-per-res', 'fm-area-res'].forEach(k => { this.el[k].classList.remove('ftf-in'); });
-    // The side lengths, on the fence itself.
-    this.placeDims();
-    this.showDims(true);
-
-    const P = 2 * (g.L + g.W), A = g.L * g.W;
-    this.el['fm-per-sub'].textContent = 'P = 2 (' + g.L + ' + ' + g.W + ')';
-    this.el['fm-per-res'].textContent = 'P = ' + P + ' m';
-    this.el['fm-area-sub'].textContent = 'A = ' + g.L + ' × ' + g.W;
-    this.el['fm-area-res'].textContent = 'A = ' + A + ' m²';
-
-    const step = (ms, fn) => this.after(this.noMotion() ? 0 : ms, fn);
-    // Perimeter: a line travels the fence, then the number resolves.
-    step(240, () => {
-      this.el['fm-per'].style.opacity = '1';
-      this.finaleTraceOne('trace-a', this.pens.main, g.L, g.W, 1300);
-    });
-    step(700, () => { this.el['fm-per-sub'].style.opacity = '1'; });
-    step(1700, () => { this.el['fm-per-res'].classList.add('ftf-in'); this.sfx('area_up'); this.el.trace.style.opacity = '0'; });
-    // Area: the grass lights up, then its number resolves.
-    step(2200, () => {
-      this.el['fm-area'].style.opacity = '1';
-      this.el.fill.style.transition = 'background 500ms ease';
-      this.el.fill.style.background = 'rgba(120,214,60,.42)';
-    });
-    step(2600, () => { this.el['fm-area-sub'].style.opacity = '1'; });
-    step(3500, () => { this.el['fm-area-res'].classList.add('ftf-in'); this.sfx('area_up'); });
-    step(4300, () => { this.el['fm-core'].style.opacity = '1'; this.sfx('success_chord'); });
-    step(5000, () => { this.el['fm-act'].style.opacity = '1'; });
-    this.track('formula_revealed', {});
-  },
   /* Re-uses the tracer for a single pen. */
   finaleTraceOne(id, p, L, W, dur) {
     const per = 2 * (L + W);
@@ -396,56 +360,6 @@ Object.assign(FenceTheFarm.prototype, {
     for (let i = 1; i <= per; i += 2) this.after(30 + dur * i / per, () => this.sfx('measure_tick'));
   },
 
-  /* --------------------------------------------------- optional SEE WHY --
-     The meter it turns out they were already reading becomes a real graph. */
-  advancedScreen() {
-    this.closeLive();
-    this.clearTimers();
-    const g = this.g;
-    this.el.fm.style.display = 'none';
-    this.el.trace.style.opacity = '0';
-    this.showDims(false);
-    this.el['area-card'].style.opacity = '0';
-    this.el.adv.style.display = 'block';
-    ['adv-0', 'adv-0b', 'adv-1', 'adv-2', 'adv-3', 'adv-4'].forEach(k => { this.el[k].style.opacity = '0'; });
-
-    // The fence sinks away and the graph takes the field's place: the pasture
-    // they were dragging becomes the curve they were tracing.
-    this.el.fill.style.transition = 'opacity 420ms ease';
-    this.el.fill.style.opacity = '0';
-    this.dropPen('main');
-    this.stats.phase = 'advanced';
-    this._goatPen = null;
-    this.goat.h = 96;
-    this.goat.x = 300; this.goat.y = 660; this.goat.tx = 300; this.goat.ty = 660;
-    this.setGoat('eat');
-
-    // Redraw the curve against length, which is what the algebra is about.
-    this.el.curve.style.opacity = '1';
-    this.el.curve.classList.add('ftf-graph');
-    this.advCurve();
-    this.el['curve-peak'].textContent = 'L = ' + g.L + ' · W = ' + g.W + ' · A = ' + (g.L * g.W);
-
-    /* Every line is written from the perimeter the player actually finished
-       with, so the algebra is about THEIR fence and the halving is visibly
-       where the 16 comes from. */
-    this.el['adv-0'].querySelector('.ftf-adv-eq').textContent = 'P = 2L + 2W';
-    this.el['adv-0b'].querySelector('.ftf-adv-eq').textContent = g.perimeter + ' = 2L + 2W';
-    this.el['adv-1'].querySelector('.ftf-adv-eq').textContent = 'L + W = ' + g.half;
-    this.el['adv-2'].querySelector('.ftf-adv-eq').textContent = 'W = ' + g.half + ' − L';
-    this.el['adv-sub'].textContent = 'L = ' + g.L + ' → W = ' + g.W;
-    this.el['adv-3'].querySelector('.ftf-adv-eq').textContent = 'A = L (' + g.half + ' − L)';
-
-    const step = (ms, fn) => this.after(this.noMotion() ? 0 : ms, fn);
-    step(220,  () => { this.el['adv-0'].style.opacity = '1'; this.sfx('area_up'); });
-    step(820,  () => { this.el['adv-0b'].style.opacity = '1'; this.sfx('area_up'); });
-    step(1500, () => { this.el['adv-1'].style.opacity = '1'; this.sfx('chime'); });
-    step(2200, () => { this.el['adv-2'].style.opacity = '1'; this.sfx('area_up'); });
-    step(2900, () => { this.el['adv-3'].style.opacity = '1'; this.sfx('area_up'); });
-    step(3600, () => { this.el['curve-peak'].style.opacity = '1'; this.sfx('chime'); });
-    step(4200, () => { this.el['adv-4'].style.opacity = '1'; });
-    this.track('advanced_revealed', {});
-  },
   /* Now with axes: x is length, y is area, and the peak is marked. The curve
      is drawn in the meter's own viewBox, so growing the element grows the
      graph - it is literally the same curve, rescaled. */
@@ -484,8 +398,6 @@ Object.assign(FenceTheFarm.prototype, {
     this.closeLive();
     this.clearTimers();
     this.stats.phase = 'complete';
-    this.el.fm.style.display = 'none';
-    this.el.adv.style.display = 'none';
     this.el.emblem.style.display = 'none';
     this.el.curve.style.opacity = '0';
     this.el.curve.classList.remove('ftf-graph');
@@ -526,7 +438,7 @@ Object.assign(FenceTheFarm.prototype, {
     this.clearTimers();
     this.stats.phase = 'explore';
     this.stats.completed = false;
-    ['fin', 'fm', 'adv', 'complete', 'title'].forEach(k => { this.el[k].style.display = 'none'; });
+    ['fin', 'complete', 'title'].forEach(k => { this.el[k].style.display = 'none'; });
     this.el.emblem.style.display = 'none';
     this.el.curve.style.opacity = '0';
     this.el.next.style.opacity = '0'; this.el.next.style.pointerEvents = 'none';

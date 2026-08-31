@@ -38,10 +38,10 @@ class FenceTheFarm {
     /* Four farms, four different questions built on the same interaction.
        The optimum is never shown before the player finds it. */
     this.ROUNDS = [
-      { id: 1, name: 'Discovery',      perimeter: 20, start: [8, 2],  optimum: [5, 5], mechanic: 'tutorial',      light: 'morning' },
-      { id: 2, name: 'Farm Record',    perimeter: 24, start: [10, 2], optimum: [6, 6], mechanic: 'record',        light: 'midday',  record: 32 },
-      { id: 3, name: 'Visual Trap',    perimeter: 28, start: [10, 4], optimum: [7, 7], mechanic: 'misconception', light: 'evening', forcedStretch: [12, 2] },
-      { id: 4, name: 'Master Builder', perimeter: 32, start: [13, 3], optimum: [8, 8], mechanic: 'mastery',       light: 'golden',  optionalTarget: 48 }
+      { id: 1, name: 'Discovery',      perimeter: 20, start: [8, 2],  optimum: [5, 5], mechanic: 'tutorial',      light: 'morning', goats: 1 },
+      { id: 2, name: 'Farm Record',    perimeter: 24, start: [10, 2], optimum: [6, 6], mechanic: 'record',        light: 'midday',  record: 32, goats: 2 },
+      { id: 3, name: 'Visual Trap',    perimeter: 28, start: [10, 4], optimum: [7, 7], mechanic: 'misconception', light: 'evening', forcedStretch: [12, 2], goats: 3 },
+      { id: 4, name: 'Master Builder', perimeter: 32, start: [13, 3], optimum: [8, 8], mechanic: 'mastery',       light: 'golden',  optionalTarget: 48, goats: 4 }
     ];
 
     /* The playable box, in the 1280 x 720 design space. The pasture is sized so
@@ -85,17 +85,34 @@ class FenceTheFarm {
     /* Short VO lines. Recordings were not supplied, so vo() is a hook: it
        fires at the right beat and is logged, and only speaks if options.vo is
        switched on. Synthetic speech is off by default, on purpose. */
+    /* The narration script. These are the exact words the recordings say, and
+       they are the source of truth for generating them - see assets/vo/.
+
+       They are DELIBERATELY LONGER than the sign. The sign is artwork with a
+       cream board about 340px across, so written copy has to survive at roughly
+       thirty characters; speech has no such limit. The pairing is the point:
+       you read "Perimeter: 20 m, locked" and you hear the sentence that
+       explains it. Neither is a transcript of the other.
+
+       Numbers are spelled out. A synthesiser reading "20 m" can say "twenty em"
+       or "twenty metres" depending on the day, and the one thing narration must
+       never do is misread the quantity the whole lesson is about. */
     this.VO = {
-      'vo.reason':    'This goat needs more grass.',
-      'vo.fence':     'You have 20 metres of fence.',
-      'vo.area':      'The grass inside the fence is the area.',
-      'vo.drag':      'Drag the corner.',
-      'vo.same':      'The fence stayed the same, but the grass grew.',
+      'vo.hook':      'How much grass can one fence hold? Let us find out.',
+      'vo.reason':    'This is her field. You have twenty metres of fence — see how much grass you can give her.',
+      'vo.fence':     'This is the perimeter. Twenty metres of fence, all the way around, and it never changes.',
+      'vo.area':      'And this is the area — all the grass inside. Count the squares.',
+      'vo.drag':      'Drag that corner, and watch what happens.',
+      'vo.same':      'Look at that. More grass — and still exactly twenty metres of fence.',
+      'vo.more':      'Try another shape.',
+      'vo.challenge': 'Now find the biggest field you can.',
+      'vo.nice':      'That is the biggest it gets. Same fence, more grass.',
       'vo.longer':    'Hmm. Longer did not mean more grass.',
-      'vo.nice':      'Nice. Same fence, more grass.',
-      'vo.record':    'Beat the farm record.',
-      'vo.stretch':   'Make it longer.',
-      'vo.didLonger': 'Did longer mean more grass?',
+      'vo.record':    'See if you can beat the farm record.',
+      'vo.stretch':   'Here is an idea. Try making the field longer.',
+      'vo.didLonger': 'Longer field. Less grass. Now find the most.',
+      'vo.exact':     'Exactly forty-eight. Nice and precise.',
+      'vo.master':    'Master build.',
       'vo.final':     'Same fence. Different area.'
     };
 
@@ -127,6 +144,11 @@ class FenceTheFarm {
     this.bindInput();
     this.prepareGoatAudio();
     this.preload();
+    /* Build the mascot controller now rather than at the first celebration.
+       Constructing it is what loads and decodes its eleven poses, so leaving it
+       until playGoatCelebration made the FIRST celebration - the one that has
+       to land hardest - the one that paid for 11 x 620px of PNG mid-performance. */
+    if (this.mascot) this.mascot();
     this.newPen('main', this.el.modules);
     this.layout(0);
     this.loop();
@@ -212,16 +234,16 @@ class FenceTheFarm {
   }
   setLight(name) { this.root.dataset.light = name || 'midday'; }
   preload() {
-    const list = ['assets/art/grass-bg.png', 'assets/art/title-logo.png',
-      'assets/art/td-post.png', 'assets/art/td-rail-h.png', 'assets/art/td-rail-v.png',
-      'assets/art/sign.png', 'assets/art/card.png', 'assets/art/area-card.png', 'assets/art/touch.png',
+    const list = ['assets/art/grass-bg.webp', 'assets/art/title-logo.webp',
+      'assets/art/td-post.webp', 'assets/art/td-rail-h.webp', 'assets/art/td-rail-v.webp',
+      'assets/art/sign.webp', 'assets/art/card.webp', 'assets/art/area-card.webp', 'assets/art/touch.webp',
       // The three plan-view sheets. She must never flash an empty box the first
       // time she bites or bleats, so they come with the rest of the scene.
-      'assets/goat/goat-walk.png', 'assets/goat/goat-eat.png', 'assets/goat/goat-bleat.png'];
+      'assets/goat/goat-walk.webp', 'assets/goat/goat-eat.webp', 'assets/goat/goat-bleat.webp'];
     // Her side-view frames, for the title and for the tilt out of it.
-    for (let i = 0; i < 8; i++) list.push('assets/art/walk-' + i + '.png');
+    for (let i = 0; i < 8; i++) list.push('assets/art/walk-' + i + '.webp');
     ['idle-0', 'idle-1', 'idle-2', 'bleat-0', 'bleat-1', 'bleat-2', 'graze-0', 'graze-1', 'graze-2', 'graze-3']
-      .forEach(n => list.push('assets/art/' + n + '.png'));
+      .forEach(n => list.push('assets/art/' + n + '.webp'));
     let left = list.length;
     const done = () => { if (--left <= 0 && !this.dead) this.el.loader.style.display = 'none'; };
     list.forEach(src => { const im = new Image(); im.onload = done; im.onerror = done; im.src = src; });
@@ -331,7 +353,7 @@ class FenceTheFarm {
       : 'left 170ms cubic-bezier(.4,0,.2,1), top 170ms cubic-bezier(.4,0,.2,1)';
     if (m.t === 'p') {
       el.style.width = (M.POST.w * c) + 'px'; el.style.height = (M.POST.h * c) + 'px';
-      el.style.background = 'url(assets/art/td-post.png) 0 0 / 100% 100% no-repeat';
+      el.style.background = 'url(assets/art/td-post.webp) 0 0 / 100% 100% no-repeat';
       // Seen from overhead a post is a disc, so it turns about its own centre.
       el.style.transformOrigin = '50% 50%';
     } else if (m.t === 'h') {
@@ -340,11 +362,11 @@ class FenceTheFarm {
       // free of half-planks at the corners; the grain is far too fine at these
       // sizes for the horizontal squash to be visible.
       el.style.width = c + 'px'; el.style.height = (M.RAIL.h * c) + 'px';
-      el.style.background = 'url(assets/art/td-rail-h.png) 50% 50% / 100% 100% no-repeat';
+      el.style.background = 'url(assets/art/td-rail-h.webp) 50% 50% / 100% 100% no-repeat';
       el.style.transformOrigin = m.o || '0% 50%';
     } else {
       el.style.width = (M.VRAIL.w * c) + 'px'; el.style.height = c + 'px';
-      el.style.background = 'url(assets/art/td-rail-v.png) 50% 50% / 100% 100% no-repeat';
+      el.style.background = 'url(assets/art/td-rail-v.webp) 50% 50% / 100% 100% no-repeat';
       el.style.transformOrigin = m.o || '50% 0%';
     }
     el.style.filter = this.baseFilter(m.t, false);
@@ -494,14 +516,26 @@ class FenceTheFarm {
     if (owns && !opts.noFence) this.syncPen(p, opts);
     else if (!owns) this.dropPen('main', { instant: true });
 
-    // Exactly one corner ever looks draggable.
-    if (this._cornerEl) { this._cornerEl.style.filter = this.baseFilter('p', false); this._cornerEl.style.scale = ''; }
+    /* Exactly one corner ever looks draggable. Handing the badge on has to put
+       the previous holder back the way it was found - ALL of it. Its z-index
+       used to be left at 880, so every post that had ever been the live corner
+       went on floating above the whole fence for the rest of the round. */
+    if (this._cornerEl) {
+      this._cornerEl.style.filter = this.baseFilter('p', false);
+      this._cornerEl.style.scale = '';
+      this._cornerEl.style.zIndex = '240';          // the plain post layer
+    }
     const corner = p.nodes.get('rp:' + g.W);
     if (corner && !this.stats.completed && this.dragAllowed()) {
       corner.style.filter = 'brightness(1.12) saturate(1.08) drop-shadow(0 0 6px rgba(255,196,74,.9)) ' +
         'drop-shadow(var(--sh-x) var(--sh-y) var(--sh-blur) var(--sh-ink))';
       corner.style.zIndex = '880';
-      corner.style.transition = 'left 170ms cubic-bezier(.4,0,.2,1), top 170ms cubic-bezier(.4,0,.2,1), scale 220ms cubic-bezier(.34,1.4,.64,1)';
+      /* makeModule deliberately gives a module NO transition under reduced
+         motion. Setting one here unconditionally overrode that for the corner -
+         and once a post has been the corner it keeps the glide for good, so a
+         player who asked for no motion still got sliding fence posts. */
+      corner.style.transition = this.noMotion() ? 'none'
+        : 'left 170ms cubic-bezier(.4,0,.2,1), top 170ms cubic-bezier(.4,0,.2,1), scale 220ms cubic-bezier(.34,1.4,.64,1)';
       corner.style.scale = '1.05';
       this._cornerEl = corner;
     } else this._cornerEl = null;
@@ -755,18 +789,16 @@ class FenceTheFarm {
     this.el.play.addEventListener('click', () => { this.ac(); this.ambience(); this.startGame(); });
     this.el.next.addEventListener('click', () => this.advance());
     this.el.skip.addEventListener('click', () => { this.sfx('button_press'); this.tutSkip(); });
-    /* The explanation is now one live screen, so every route that used to lead
-       to a static board leads there instead. */
+    /* The explanation is one live screen. The emblem's Continue is the only way
+       into it, and its own two buttons are the only way out - the formula board
+       and the algebra wall that used to sit between them are gone, along with
+       the four buttons that led in and out of them. */
     this.el['to-formula'].addEventListener('click', () => { this.sfx('button_press'); this.explainScreen(); });
-    this.el['see-why'].addEventListener('click', () => { this.sfx('button_press'); this.explainScreen(); });
-    this.el['live-whybtn'].addEventListener('click', () => { this.sfx('button_press'); this.explainWhy(); });
     this.el['live-done'].addEventListener('click', () => {
       this.sfx('button_press');
       this.closeLive();
       this.completeScreen();
     });
-    this.el['adv-done'].addEventListener('click', () => { this.sfx('button_press'); this.completeScreen(); });
-    this.el['to-complete'].addEventListener('click', () => { this.sfx('button_press'); this.completeScreen(); });
     this.el.replay.addEventListener('click', () => { this.sfx('button_press'); this.el.complete.style.display = 'none'; this._fresh = true; this.startRound(0); });
     this.el['explore-btn'].addEventListener('click', () => { this.sfx('button_press'); this.exploreScreen(); });
     this.el['explore-exit'].addEventListener('click', () => { this.sfx('button_press'); this.titleScreen(); });
@@ -857,7 +889,14 @@ class FenceTheFarm {
     const roomW = mid.clientWidth, roomH = mid.clientHeight;
     if (!roomW || !roomH) return;
     opts = opts || {};
-    const min = opts.min || 22, max = opts.max || 42;
+    /* `min` is the size the type would LIKE to stop at. `floor` is the size it
+       is actually allowed to reach, and it exists because min was being treated
+       as a hard stop: a line that still did not fit at 22px was rendered at 22px
+       anyway and simply hung off both ends of the board. Six of the game's lines
+       did exactly that. The board wins now - the search may go all the way down
+       to `floor`, so no message can overflow, and copy that has to shrink far is
+       a copy problem the measurement will make obvious. */
+    const min = opts.min || 22, max = opts.max || 42, floor = opts.floor || 15;
     const fillW = roomW * 0.94, fillH = roomH * 0.94;
 
     // Remember each line's authored size so repeat calls measure from the same
@@ -869,7 +908,7 @@ class FenceTheFarm {
     // Widen or narrow the whole block by one factor, so a short line grows to
     // fill the board and a long one shrinks to sit on it. Binary search beats
     // stepping: eight passes lands within a fifth of a pixel.
-    let lo = min / lead, hi = max / lead;
+    let lo = Math.min(min, floor) / lead, hi = max / lead;
     // Measure each LINE, not the container: a container's scrollWidth is
     // clamped to its clientWidth, so it can never report that the text is
     // narrower than the board - which would make growing impossible.
@@ -907,93 +946,6 @@ class FenceTheFarm {
     this.after(340, () => this.plankSay(line));
     this.after(740, () => p.classList.remove("ftf-flip"));
   }
-  /* A message that shows for a moment and then hands the plank back. */
-  /* ------------------------------------------------------- the question --
-     One short prompt with two answers. Used for the tutorial check ("what
-     stayed the same?") and for the prediction before the stretch experiment.
-
-     opts.question   short line, ideally under 8 words
-     opts.options    [{ label, key, correct }]  - correct is optional
-     opts.graded     false for a prediction: a hypothesis is not marked
-     opts.onPick     (option, wasCorrect) => void, after the feedback is read
-     opts.wrong      what to say when a graded answer is wrong; the player may
-                     try again, so this never ends the exchange
-
-     Nothing here advances the game: the caller decides in onPick, so a question
-     can never swallow a beat the player still has to perform. */
-  askChoice(opts) {
-    const A = this.el.ask;
-    this._askOpen = true;
-    this.el['ask-q'].style.display = '';        // a banner may have hidden it
-    this.el['ask-q'].textContent = opts.question;
-    const fb = this.el['ask-fb'];
-    fb.textContent = ''; fb.classList.remove('ftf-in');
-    const row = this.el['ask-row'];
-    row.innerHTML = '';
-    const buttons = [];
-    opts.options.forEach(o => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'ftf-ask-btn ftf-focus';
-      b.textContent = o.label;
-      b.onclick = () => this.answerChoice(opts, o, b, buttons);
-      row.appendChild(b);
-      buttons.push(b);
-    });
-    A.classList.add('ftf-in');
-    this.track('question_shown', { id: opts.id });
-  }
-  answerChoice(opts, o, btn, buttons) {
-    if (btn.disabled) return;
-    this.sfx('button_press');
-    const graded = opts.graded !== false;
-    const right = !graded || !!o.correct;
-    this.track('question_answered', { id: opts.id, pick: o.key, correct: graded ? !!o.correct : null });
-
-    if (graded && !o.correct) {
-      // Not a failure state. Point at the value that has not moved and let
-      // them look again - the lock is the answer, so show the lock.
-      btn.classList.add('ftf-rethink');
-      btn.disabled = true;
-      this.el['ask-fb'].textContent = opts.wrong || '';
-      this.el['ask-fb'].classList.add('ftf-in');
-      this.lockPulse();
-      this.sfx('fence_snap');
-      return;
-    }
-    buttons.forEach(b => { b.disabled = true; });
-    btn.classList.add('ftf-picked');
-    this.el['ask-fb'].textContent = o.reply || opts.reply || '';
-    this.el['ask-fb'].classList.add('ftf-in');
-    this.sfx(graded ? 'success_chord' : 'chime');
-    // Long enough to read the reply, then the caller takes over.
-    this.after(this.noMotion() ? 700 : 1500, () => {
-      this.closeChoice();
-      if (opts.onPick) opts.onPick(o, right);
-    });
-  }
-  closeChoice() {
-    this._askOpen = false;
-    this.el.ask.classList.remove('ftf-in');
-    this.el['ask-fb'].classList.remove('ftf-in');
-  }
-  /* One line under the sign, with no question attached. The sign is often
-     already saying something at these moments, so a second surface is needed -
-     and the question panel already provides a styled one. */
-  showBanner(text, ms) {
-    const A = this.el.ask, fb = this.el['ask-fb'];
-    this.el['ask-q'].textContent = '';
-    this.el['ask-q'].style.display = 'none';
-    this.el['ask-row'].innerHTML = '';
-    fb.textContent = text;
-    A.classList.add('ftf-in');
-    fb.classList.add('ftf-in');
-    this.after(ms || 1800, () => {
-      A.classList.remove('ftf-in');
-      fb.classList.remove('ftf-in');
-      this.el['ask-q'].style.display = '';
-    });
-  }
   /* ----------------------------------------------------- the spotlight ----
      Dims the stage and lifts the named elements above the dim. One subject at
      a time: calling it again lowers whatever was lit before, so two things can
@@ -1025,6 +977,7 @@ class FenceTheFarm {
     this.sfx('fence_snap');
   }
 
+  /* A message that shows for a moment and then hands the plank back. */
   showToast(key, ms) {
     this._msg = key;
     this.plankSay(this.t(key));
@@ -1071,7 +1024,7 @@ class FenceTheFarm {
     this.showDims(false);
     if (this.spotlight) this.spotlight(null);
     this.dropAllPens({ instant: true });
-    ['fin', 'fm', 'adv', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
+    ['fin', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
     this.el.emblem.style.display = 'none';
     this.el.title.style.display = 'block';
     this.el.title.style.opacity = '1';
@@ -1179,7 +1132,6 @@ class FenceTheFarm {
      entry makes, so no new route can ever forget. */
   closeLive() {
     this.el.live.classList.remove('ftf-on');
-    this.el['live-why'].classList.remove('ftf-in');
     this.el['live-strategy'].classList.remove('ftf-in');
     this.el.curve.classList.remove('ftf-live-pos');
   }
@@ -1189,7 +1141,7 @@ class FenceTheFarm {
     this.closeLive();
     // NOT the title: startGame is still hauling it up its ropes, and hiding it
     // here would cut that short. It hides itself when it has finished leaving.
-    ['fin', 'fm', 'adv', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
+    ['fin', 'complete', 'explore'].forEach(k => { this.el[k].style.display = 'none'; });
     this.el.emblem.style.display = 'none';
     this.dropAllPens({ instant: true });
     this.layout(ri);
@@ -1304,6 +1256,22 @@ class FenceTheFarm {
     this.render();
     this.bump(this.el['area-val'], 'ftf-hero', 620);
 
+    this.announce('Best shape found. ' + g.L + ' by ' + g.W + ' metres, ' + this.t('a11y.area').toLowerCase() + ' ' + area +
+      ' ' + this.t('a11y.sqm') + ', with the same ' + g.perimeter + ' metres of fence.');
+    this.track('round_completed', { area: area });
+    /* levelSucceed is wrapped by cheer.js, so this is what starts the mascot -
+       and the mascot blurs the farm out and takes the goat off the field for
+       eight seconds. Which is why the beats that happen ON the pasture are no
+       longer scheduled here: they used to fire at +300ms and +560ms, behind the
+       blur, so the burst, the grass puffs and the reveal of the side lengths
+       all played to a screen nobody could see. succeedField() is handed to the
+       celebration instead and plays as the farm comes back. */
+    this.levelSucceed();
+  }
+  /* The pasture's own moment of success. Deliberately separate from succeed()
+     so its owner can decide WHEN the field is worth looking at. */
+  succeedField() {
+    const g = this.g;
     // Final fence snap: the whole enclosure settles once.
     this.after(90, () => {
       if (!this.noMotion()) this.pens.main.nodes.forEach(el => { el.style.animation = 'ftf-rise 220ms cubic-bezier(.34,1.4,.64,1)'; });
@@ -1319,23 +1287,31 @@ class FenceTheFarm {
       for (let i = 0; i <= g.L; i += step) { const q = this.px(i, g.W); this.puff(q[0], q[1], this.pens.main); }
       for (let j = 0; j <= g.W; j += Math.max(1, Math.round(g.W / 3))) { const q = this.px(0, j); this.puff(q[0], q[1], this.pens.main); }
     });
-    this.announce('Best shape found. ' + g.L + ' by ' + g.W + ' metres, ' + this.t('a11y.area').toLowerCase() + ' ' + area +
-      ' ' + this.t('a11y.sqm') + ', with the same ' + g.perimeter + ' metres of fence.');
     // The side lengths are a reveal, not a readout: they appear once the shape
     // is found, so during play the player is reading the pasture, not numbers.
     this.after(560, () => { this.placeDims(); this.showDims(true); });
-    this.track('round_completed', { area: area });
-    this.levelSucceed();
   }
   offerNext(labelKey) {
-    this.el.next.querySelector('span').textContent = this.t(labelKey || 'action.next');
-    this.el.next.style.opacity = '1';
-    this.el.next.style.pointerEvents = 'auto';
+    const b = this.el.next;
+    b.querySelector('span').textContent = this.t(labelKey || 'action.next');
+    /* Centre it on the recap's gap only once the label is on it: the button is
+       sized by its own text now, so its width is not known until it has some. */
+    if (b.classList.contains('ftf-mid') && this._nextMid != null) {
+      b.style.left = Math.round(this._nextMid - b.offsetWidth / 2) + 'px';
+    }
+    b.style.opacity = '1';
+    b.style.pointerEvents = 'auto';
   }
   advance() {
     this.el.next.style.opacity = '0'; this.el.next.style.pointerEvents = 'none';
+    /* A button that has left the screen must not keep the keyboard focus. This
+       one is hidden with opacity, so it stays focusable AND focused - and when
+       it comes back with a new label the browser still counts it as
+       focus-visible and paints the focus ring around it. That ring is why this
+       one button looked unlike every other button in the game. */
+    this.el.next.blur();
     this.el.next.classList.remove('ftf-mid');
-    this.el.next.style.left = ''; this.el.next.style.marginLeft = '';   // back to its corner
+    this.el.next.style.left = ''; this.el.next.style.marginLeft = ''; this._nextMid = null;   // back to its corner
     this.sfx('button_press');
     if (this.g.round >= 3) { this.finaleStart(); return; }
     this.showDims(false);

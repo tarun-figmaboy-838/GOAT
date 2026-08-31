@@ -155,7 +155,16 @@ class InstructionController {
      revealed and the next button is waiting. In both the finger went on
      tapping the corner every five seconds, which reads as nagging. */
   idleAllowed() {
-    return this.g.stats.phase === 'play' && !this.g.stats.completed;
+    if (this.g.stats.phase !== 'play' || this.g.stats.completed) return false;
+    /* The tutorial does its own pointing, with its own much larger hand, for as
+       long as it is teaching the control. Arming this ladder on top of that put
+       TWO hands cut from the same artwork on the same corner, one a third the
+       size of the other - which reads as a rendering bug, not as help. The idle
+       ladder is for a player nobody is currently pointing anything at, so on
+       farm 1 it waits until the tutorial has handed over at beat 7. */
+    if (this.g.mechanic && this.g.mechanic() === 'tutorial' &&
+        this.g.lv && this.g.lv.tutBeat < 7) return false;
+    return true;
   }
   armIdle() {
     this.clear();
@@ -185,8 +194,12 @@ class InstructionController {
        beat that explains the control; this small one is for the idle moments
        afterwards. If that one is up, this one stays away - two hands pointing
        at the same corner is worse than none. */
+    /* Read the value that was SET, not the one being painted. #ftf-hand carries
+       a 300 ms opacity transition, so getComputedStyle reports whatever the
+       fade happens to be passing through - which meant this test could sample a
+       hand that is plainly on screen and conclude it was hidden. */
     const big = this.g.el.hand;
-    if (big && getComputedStyle(big).opacity !== '0') return;
+    if (big && big.style.opacity === '1') return;
     const p = this.handPoint();
     if (!p) return;
     const h = this.hand;
